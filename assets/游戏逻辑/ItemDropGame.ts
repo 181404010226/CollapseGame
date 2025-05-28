@@ -116,10 +116,47 @@ export class ItemDropGame extends Component {
             return;
         }
         
-        const touchPos = event.getUILocation();
+        const touchPos = event.getLocation();
         const worldPos = this.mainCamera.screenToWorld(new Vec3(touchPos.x, touchPos.y, 0));
         
+        // 检查触摸位置是否在dividerLine正下方的有效区域内
+        if (!this.isValidTouchPosition(worldPos)) {
+            return;
+        }
+        
         this.dropItemAtPosition(worldPos.x);
+    }
+    
+    /**
+     * 检查触摸位置是否在dividerLine正下方的有效区域内
+     */
+    private isValidTouchPosition(worldPos: Vec3): boolean {
+        if (!this.dividerLine) {
+            return false;
+        }
+        
+        // 获取dividerLine的世界坐标位置
+        const dividerWorldPos = this.dividerLine.getWorldPosition();
+        
+        // 获取dividerLine的UITransform组件以获取宽度
+        const dividerTransform = this.dividerLine.getComponent(UITransform);
+        if (!dividerTransform) {
+            console.warn('ItemDropGame: dividerLine缺少UITransform组件');
+            return false;
+        }
+        
+        // 计算dividerLine的左右边界
+        const halfWidth = dividerTransform.width / 2;
+        const leftBound = dividerWorldPos.x - halfWidth;
+        const rightBound = dividerWorldPos.x + halfWidth;
+        
+        // 检查x坐标是否在dividerLine的宽度范围内
+        const isWithinXRange = worldPos.x >= leftBound && worldPos.x <= rightBound;
+        
+        // 检查y坐标是否在dividerLine下方
+        const isBelowDivider = worldPos.y <= dividerWorldPos.y;
+        
+        return isWithinXRange && isBelowDivider;
     }
     
     /**
