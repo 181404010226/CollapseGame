@@ -18,13 +18,14 @@
     "_children": [
       {
         "__id__": 2
+      },
+      {
+        "__id__": 155
       }
     ],
     "_active": true,
     "_components": [],
-    "_prefab": {
-      "__id__": 155
-    },
+    "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
       "x": 0,
@@ -54,7 +55,7 @@
     },
     "autoReleaseAssets": false,
     "_globals": {
-      "__id__": 156
+      "__id__": 157
     },
     "_id": "f0fb7df2-0aa9-48b6-b309-391b37db5c0e"
   },
@@ -2960,7 +2961,7 @@
   },
   {
     "__type__": "cc.Node",
-    "_name": "TaskCenter",
+    "_name": "任务中心",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_parent": {
@@ -3155,7 +3156,7 @@
   },
   {
     "__type__": "cc.Node",
-    "_name": "Lottery",
+    "_name": "抽奖",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_parent": {
@@ -3352,7 +3353,7 @@
   },
   {
     "__type__": "cc.Node",
-    "_name": "Profile",
+    "_name": "我的",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_parent": {
@@ -5864,38 +5865,97 @@
     "_id": "f8w27GLGtCm5/wkNWl8AX/"
   },
   {
-    "__type__": "cc.PrefabInfo",
-    "root": null,
-    "asset": null,
-    "fileId": "f0fb7df2-0aa9-48b6-b309-391b37db5c0e",
-    "instance": null,
-    "targetOverrides": null
+    "__type__": "cc.Node",
+    "_name": "测试",
+    "_objFlags": 0,
+    "__editorExtras__": {},
+    "_parent": {
+      "__id__": 1
+    },
+    "_children": [],
+    "_active": true,
+    "_components": [
+      {
+        "__id__": 156
+      }
+    ],
+    "_prefab": null,
+    "_lpos": {
+      "__type__": "cc.Vec3",
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "_lrot": {
+      "__type__": "cc.Quat",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1
+    },
+    "_lscale": {
+      "__type__": "cc.Vec3",
+      "x": 1,
+      "y": 1,
+      "z": 1
+    },
+    "_mobility": 0,
+    "_layer": 1073741824,
+    "_euler": {
+      "__type__": "cc.Vec3",
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "_id": "e2FRIfbVZGt5Lvf9TrkcOX"
+  },
+  {
+    "__type__": "25f5cF9HHdEJJkI/fnrryQJ",
+    "_name": "",
+    "_objFlags": 0,
+    "__editorExtras__": {},
+    "node": {
+      "__id__": 155
+    },
+    "_enabled": true,
+    "__prefab": null,
+    "testConnectionBtn": {
+      "__id__": 84
+    },
+    "initDeviceInfoBtn": {
+      "__id__": 89
+    },
+    "sendInfoLogBtn": {
+      "__id__": 94
+    },
+    "statusLabel": null,
+    "_id": "26A70Sy5tMF4hUIWaMB0Q7"
   },
   {
     "__type__": "cc.SceneGlobals",
     "ambient": {
-      "__id__": 157
-    },
-    "shadows": {
       "__id__": 158
     },
-    "_skybox": {
+    "shadows": {
       "__id__": 159
     },
-    "fog": {
+    "_skybox": {
       "__id__": 160
     },
-    "octree": {
+    "fog": {
       "__id__": 161
     },
-    "skin": {
+    "octree": {
       "__id__": 162
     },
-    "lightProbeInfo": {
+    "skin": {
       "__id__": 163
     },
-    "postSettings": {
+    "lightProbeInfo": {
       "__id__": 164
+    },
+    "postSettings": {
+      "__id__": 165
     },
     "bakedWithStationaryMainLight": false,
     "bakedWithHighpLightmap": false
