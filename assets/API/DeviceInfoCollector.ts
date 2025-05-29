@@ -1,5 +1,4 @@
 import { _decorator, Component, sys, log, native, warn } from 'cc';
-import { DeviceLogAPI } from './DeviceLogAPI';
 
 const { ccclass, property } = _decorator;
 
@@ -33,7 +32,12 @@ export interface DeviceInfo {
 @ccclass('DeviceInfoCollector')
 export class DeviceInfoCollector extends Component {
     
-    private deviceLogAPI: DeviceLogAPI = null;
+    @property
+    private apiBaseUrl: string = 'http://101.133.145.244:7071';
+    
+    @property
+    private timeout: number = 10000; // 10秒超时
+    
     private cachedDeviceInfo: DeviceInfo = null;
     private deviceInfoPromise: Promise<DeviceInfo> = null;
     private resolveDeviceInfoPromise: (value: DeviceInfo) => void = null;
@@ -43,15 +47,6 @@ export class DeviceInfoCollector extends Component {
         console.error('=== DeviceInfoCollector start 开始 ===');
         console.error('当前平台:', sys.platform);
         console.error('是否原生:', sys.isNative);
-        
-        // 获取或添加DeviceLogAPI组件
-        this.deviceLogAPI = this.getComponent(DeviceLogAPI);
-        if (!this.deviceLogAPI) {
-            this.deviceLogAPI = this.addComponent(DeviceLogAPI);
-            console.error('DeviceLogAPI组件已添加');
-        } else {
-            console.error('DeviceLogAPI组件已存在');
-        }
         
         // 初始化JsbBridge通信
         this.initNativeBridge();
@@ -254,7 +249,7 @@ export class DeviceInfoCollector extends Component {
                     warn('设备信息获取超时，返回默认信息');
                     this.handleDeviceInfoError('获取超时');
                 }
-            }, 5000); // 5秒超时
+            }, this.timeout);
         });
 
         // 根据平台选择获取方式
@@ -368,14 +363,18 @@ export class DeviceInfoCollector extends Component {
                 await this.collectDeviceInfo();
             }
 
-            // 发送到服务器
-            await this.deviceLogAPI.saveDeviceLog({
+            // 准备发送的数据
+            const deviceLogData = {
                 logLevel: 'INFO',
                 logMessage: '设备信息上报',
                 eventType: 'DEVICE_INFO_UPLOAD',
                 userId: 'system',
+                timestamp: Date.now(),
                 ...this.cachedDeviceInfo
-            });
+            };
+
+            // 发送到服务器
+            await this.sendRequest('/base/saveDeviceLog', deviceLogData);
 
             log('设备信息发送成功！');
             return true;
@@ -383,6 +382,48 @@ export class DeviceInfoCollector extends Component {
             warn('设备信息发送失败:', error);
             return false;
         }
+    }
+
+    /**
+     * 发送HTTP请求
+     * @param endpoint API端点
+     * @param data 请求数据
+     */
+    private async sendRequest(endpoint: string, data: any): Promise<any> {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            const url = this.apiBaseUrl + endpoint;
+            
+            xhr.timeout = this.timeout;
+            xhr.ontimeout = () => {
+                reject(new Error('请求超时'));
+            };
+            
+            xhr.onreadystatechange = () => {
+                if (xhr.readyState === 4) {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            resolve(response);
+                        } catch (parseError) {
+                            reject(new Error('响应解析失败: ' + parseError));
+                        }
+                    } else {
+                        reject(new Error(`HTTP错误: ${xhr.status} - ${xhr.statusText}`));
+                    }
+                }
+            };
+            
+            xhr.onerror = () => {
+                reject(new Error('网络请求失败'));
+            };
+            
+            xhr.open('POST', url, true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.setRequestHeader('Accept', 'application/json');
+            
+            xhr.send(JSON.stringify(data));
+        });
     }
 
     /**
