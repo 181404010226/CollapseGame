@@ -1,4 +1,4 @@
-import { _decorator, Component, sys, log } from 'cc';
+import { _decorator, Component, sys, log, native, warn } from 'cc';
 import { DeviceLogAPI } from './DeviceLogAPI';
 
 const { ccclass, property } = _decorator;
@@ -35,15 +35,196 @@ export class DeviceInfoCollector extends Component {
     
     private deviceLogAPI: DeviceLogAPI = null;
     private cachedDeviceInfo: DeviceInfo = null;
+    private deviceInfoPromise: Promise<DeviceInfo> = null;
+    private resolveDeviceInfoPromise: (value: DeviceInfo) => void = null;
+    private rejectDeviceInfoPromise: (reason?: any) => void = null;
 
     start() {
+        console.error('=== DeviceInfoCollector start 开始 ===');
+        console.error('当前平台:', sys.platform);
+        console.error('是否原生:', sys.isNative);
+        
         // 获取或添加DeviceLogAPI组件
         this.deviceLogAPI = this.getComponent(DeviceLogAPI);
         if (!this.deviceLogAPI) {
             this.deviceLogAPI = this.addComponent(DeviceLogAPI);
+            console.error('DeviceLogAPI组件已添加');
+        } else {
+            console.error('DeviceLogAPI组件已存在');
         }
         
+        // 初始化JsbBridge通信
+        this.initNativeBridge();
+        
+        console.error('=== DeviceInfoCollector start 完成 ===');
         log('DeviceInfoCollector组件已启动，准备收集设备信息');
+    }
+
+    /**
+     * 初始化与原生的通信桥梁
+     */
+    private initNativeBridge(): void {
+        console.error('开始初始化原生通信桥梁...');
+        console.error('检查平台:', sys.platform === sys.Platform.ANDROID ? 'Android' : '其他平台');
+        console.error('检查原生环境:', sys.isNative ? '是原生' : '非原生');
+        
+        if (sys.platform === sys.Platform.ANDROID && sys.isNative) {
+            console.error('满足Android原生条件，设置JsbBridge回调...');
+            
+            try {
+                // 检查native.bridge是否可用
+                if (typeof native !== 'undefined' && native.bridge) {
+                    console.error('native.bridge 可用');
+                    
+                    // 设置接收原生消息的回调
+                    native.bridge.onNative = (command: string, data: string) => {
+                        console.error(`收到原生消息: ${command}, 数据: ${data}`);
+                        log(`收到原生消息: ${command}, 数据: ${data}`);
+                        this.handleNativeResponse(command, data);
+                    };
+                    
+                    console.error('JsbBridge回调设置成功');
+                } else {
+                    console.error('native.bridge 不可用');
+                }
+            } catch (error) {
+                console.error('设置JsbBridge回调失败:', error);
+            }
+        } else {
+            console.error('不满足Android原生条件，跳过JsbBridge初始化');
+        }
+        
+        console.error('原生通信桥梁初始化完成');
+    }
+
+    /**
+     * 处理来自原生的响应
+     */
+    private handleNativeResponse(command: string, data: string): void {
+        switch (command) {
+            case 'deviceInfoResult':
+                this.handleDeviceInfoResult(data);
+                break;
+            case 'deviceInfoError':
+                this.handleDeviceInfoError(data);
+                break;
+            case 'androidIdResult':
+                log('Android ID:', data);
+                break;
+            case 'simInfoResult':
+                log('SIM信息:', data);
+                break;
+            case 'deviceModelResult':
+                log('设备型号信息:', data);
+                break;
+            case 'batteryInfoResult':
+                log('电池信息:', data);
+                break;
+            case 'networkInfoResult':
+                log('网络信息:', data);
+                break;
+            case 'systemInfoResult':
+                log('系统信息:', data);
+                break;
+            default:
+                log('未处理的原生响应:', command, data);
+                break;
+        }
+    }
+
+    /**
+     * 处理设备信息获取成功的回调
+     */
+    private handleDeviceInfoResult(jsonData: string): void {
+        try {
+            const nativeDeviceInfo = JSON.parse(jsonData);
+            
+            // 将原生数据转换为我们的DeviceInfo格式
+            const deviceInfo: DeviceInfo = {
+                // 从原生获取的真实数据
+                androidId: nativeDeviceInfo.androidId || '',
+                simCard: nativeDeviceInfo.simCard || '',
+                brand: nativeDeviceInfo.brand || '',
+                model: nativeDeviceInfo.model || '',
+                osVersion: nativeDeviceInfo.osVersion || '',
+                deviceId: nativeDeviceInfo.deviceId || '',
+                platform: nativeDeviceInfo.platform || this.getPlatform(),
+                ipAddress: nativeDeviceInfo.ipAddress || '',
+                hasGyroscope: nativeDeviceInfo.hasGyroscope || false,
+                debug: nativeDeviceInfo.debugMode || false,
+                root: nativeDeviceInfo.isRoot || false,
+                charging: nativeDeviceInfo.isCharging || false,
+                vpn: nativeDeviceInfo.isVPN || false,
+                network: nativeDeviceInfo.hasNetwork || false,
+                wifi: nativeDeviceInfo.isWiFi || false,
+                
+                // iOS相关（Android上为空）
+                idfa: '',
+                
+                // 其他信息
+                channel: '',
+                ipLocation: '',
+                lianScore: 0,
+                cleanData: false,
+                updateTime: new Date().toISOString()
+            };
+
+            this.cachedDeviceInfo = deviceInfo;
+            log('设备信息收集完成:', deviceInfo);
+            
+            // 如果有等待的Promise，解决它
+            if (this.resolveDeviceInfoPromise) {
+                this.resolveDeviceInfoPromise(deviceInfo);
+                this.deviceInfoPromise = null;
+                this.resolveDeviceInfoPromise = null;
+                this.rejectDeviceInfoPromise = null;
+            }
+            
+        } catch (error) {
+            log('解析设备信息JSON失败:', error);
+            this.handleDeviceInfoError('JSON解析失败: ' + error.message);
+        }
+    }
+
+    /**
+     * 处理设备信息获取失败的回调
+     */
+    private handleDeviceInfoError(errorMsg: string): void {
+        warn('获取设备信息失败:', errorMsg);
+        
+        // 创建默认的空设备信息
+        const defaultDeviceInfo: DeviceInfo = {
+            androidId: '',
+            simCard: '',
+            idfa: '',
+            brand: '',
+            model: '',
+            osVersion: sys.osVersion || '',
+            deviceId: '',
+            channel: '',
+            platform: this.getPlatform(),
+            ipAddress: '',
+            ipLocation: '',
+            updateTime: new Date().toISOString(),
+            hasGyroscope: false,
+            lianScore: 0,
+            debug: false,
+            root: false,
+            charging: false,
+            vpn: false,
+            cleanData: false,
+            network: false,
+            wifi: false
+        };
+
+        this.cachedDeviceInfo = defaultDeviceInfo;
+        
+        if (this.resolveDeviceInfoPromise) {
+            this.resolveDeviceInfoPromise(defaultDeviceInfo);
+            this.deviceInfoPromise = null;
+            this.resolveDeviceInfoPromise = null;
+            this.rejectDeviceInfoPromise = null;
+        }
     }
 
     /**
@@ -52,42 +233,127 @@ export class DeviceInfoCollector extends Component {
     public async collectDeviceInfo(): Promise<DeviceInfo> {
         log('开始收集设备信息...');
         
-        const deviceInfo: DeviceInfo = {
-            // 设备标识信息
-            androidId: this.getAndroidId(),
-            simCard: this.getSimCardInfo(),
-            idfa: this.getIDFA(),
-            deviceId: this.getDeviceId(),
-            
-            // 设备硬件信息
-            brand: this.getDeviceBrand(),
-            model: this.getDeviceModel(),
-            osVersion: this.getOSVersion(),
-            platform: this.getPlatform(),
-            
-            // 网络和位置信息
-            ipAddress: await this.getIPAddress(),
-            ipLocation: await this.getIPLocation(),
-            channel: this.getChannel(),
-            
-            // 设备状态信息
-            hasGyroscope: this.hasGyroscope(),
-            debug: this.isDebugMode(),
-            root: this.isRooted(),
-            charging: this.isCharging(),
-            vpn: this.isVPNConnected(),
-            cleanData: this.isCleanData(),
-            network: this.hasNetworkConnection(),
-            wifi: this.isWiFiConnected(),
-            
-            // 其他信息
-            lianScore: this.getLianScore(),
-            updateTime: new Date().toISOString()
-        };
+        // 如果已有缓存，直接返回
+        if (this.cachedDeviceInfo) {
+            return this.cachedDeviceInfo;
+        }
 
-        this.cachedDeviceInfo = deviceInfo;
-        log('设备信息收集完成:', deviceInfo);
-        return deviceInfo;
+        // 如果正在请求中，返回现有的Promise
+        if (this.deviceInfoPromise) {
+            return this.deviceInfoPromise;
+        }
+
+        // 创建新的Promise
+        this.deviceInfoPromise = new Promise<DeviceInfo>((resolve, reject) => {
+            this.resolveDeviceInfoPromise = resolve;
+            this.rejectDeviceInfoPromise = reject;
+            
+            // 设置超时
+            setTimeout(() => {
+                if (this.deviceInfoPromise) {
+                    warn('设备信息获取超时，返回默认信息');
+                    this.handleDeviceInfoError('获取超时');
+                }
+            }, 5000); // 5秒超时
+        });
+
+        // 根据平台选择获取方式
+        if (sys.platform === sys.Platform.ANDROID && sys.isNative) {
+            // 发送请求到Android原生
+            this.requestNativeDeviceInfo();
+        } else {
+            // 非Android平台或非原生环境，返回默认信息
+            warn('非Android原生环境，无法获取设备信息');
+            setTimeout(() => {
+                this.handleDeviceInfoError('非Android原生环境');
+            }, 100);
+        }
+
+        return this.deviceInfoPromise;
+    }
+
+    /**
+     * 请求原生设备信息
+     */
+    private requestNativeDeviceInfo(): void {
+        try {
+            native.bridge.sendToNative('getDeviceInfo', '');
+            log('已发送设备信息请求到Android原生');
+        } catch (error) {
+            warn('发送原生请求失败:', error);
+            this.handleDeviceInfoError('发送请求失败: ' + error.message);
+        }
+    }
+
+    /**
+     * 获取特定的设备信息
+     */
+    public async getAndroidId(): Promise<string> {
+        if (sys.platform === sys.Platform.ANDROID && sys.isNative) {
+            return new Promise((resolve) => {
+                const originalHandler = native.bridge.onNative;
+                const timeout = setTimeout(() => {
+                    warn('获取Android ID超时');
+                    resolve('');
+                    native.bridge.onNative = originalHandler;
+                }, 3000);
+
+                native.bridge.onNative = (command: string, data: string) => {
+                    if (command === 'androidIdResult') {
+                        clearTimeout(timeout);
+                        resolve(data || '');
+                        native.bridge.onNative = originalHandler;
+                    } else if (originalHandler) {
+                        originalHandler(command, data);
+                    }
+                };
+                
+                try {
+                    native.bridge.sendToNative('getAndroidId', '');
+                } catch (error) {
+                    clearTimeout(timeout);
+                    warn('发送获取Android ID请求失败:', error);
+                    resolve('');
+                    native.bridge.onNative = originalHandler;
+                }
+            });
+        }
+        warn('非Android原生环境，无法获取Android ID');
+        return '';
+    }
+
+    public async getSimInfo(): Promise<string> {
+        if (sys.platform === sys.Platform.ANDROID && sys.isNative) {
+            return new Promise((resolve) => {
+                const originalHandler = native.bridge.onNative;
+                const timeout = setTimeout(() => {
+                    warn('获取SIM信息超时');
+                    resolve('');
+                    native.bridge.onNative = originalHandler;
+                }, 3000);
+
+                native.bridge.onNative = (command: string, data: string) => {
+                    if (command === 'simInfoResult') {
+                        clearTimeout(timeout);
+                        resolve(data || '');
+                        native.bridge.onNative = originalHandler;
+                    } else if (originalHandler) {
+                        originalHandler(command, data);
+                    }
+                };
+                
+                try {
+                    native.bridge.sendToNative('getSimInfo', '');
+                } catch (error) {
+                    clearTimeout(timeout);
+                    warn('发送获取SIM信息请求失败:', error);
+                    resolve('');
+                    native.bridge.onNative = originalHandler;
+                }
+            });
+        }
+        warn('非Android原生环境，无法获取SIM信息');
+        return '';
     }
 
     /**
@@ -114,89 +380,9 @@ export class DeviceInfoCollector extends Component {
             log('设备信息发送成功！');
             return true;
         } catch (error) {
-            log('设备信息发送失败:', error);
+            warn('设备信息发送失败:', error);
             return false;
         }
-    }
-
-    /**
-     * 获取Android ID
-     */
-    private getAndroidId(): string {
-        if (sys.platform === sys.Platform.ANDROID) {
-            // 在实际项目中，需要通过原生插件获取
-            // 这里返回模拟数据
-            return this.generateMockId('android');
-        }
-        return '';
-    }
-
-    /**
-     * 获取SIM卡信息
-     */
-    private getSimCardInfo(): string {
-        if (sys.isMobile) {
-            // 在实际项目中，需要通过原生插件获取SIM卡信息
-            // 这里返回模拟数据
-            const simProviders = ['中国移动', '中国联通', '中国电信'];
-            return simProviders[Math.floor(Math.random() * simProviders.length)];
-        }
-        return '';
-    }
-
-    /**
-     * 获取iOS IDFA
-     */
-    private getIDFA(): string {
-        if (sys.platform === sys.Platform.IOS) {
-            // 在实际项目中，需要通过原生插件获取IDFA
-            // 这里返回模拟数据
-            return this.generateMockId('idfa');
-        }
-        return '';
-    }
-
-    /**
-     * 获取设备ID
-     */
-    private getDeviceId(): string {
-        // 使用Cocos Creator的设备ID获取方法
-        return sys.getSafeAreaRect().toString() + '_' + Date.now();
-    }
-
-    /**
-     * 获取设备品牌
-     */
-    private getDeviceBrand(): string {
-        if (sys.platform === sys.Platform.ANDROID) {
-            // 在实际项目中，通过原生插件获取
-            const brands = ['华为', '小米', 'OPPO', 'vivo', '三星', '一加'];
-            return brands[Math.floor(Math.random() * brands.length)];
-        } else if (sys.platform === sys.Platform.IOS) {
-            return 'Apple';
-        }
-        return 'Unknown';
-    }
-
-    /**
-     * 获取设备型号
-     */
-    private getDeviceModel(): string {
-        if (sys.platform === sys.Platform.ANDROID) {
-            const models = ['P50 Pro', 'Mi 13', 'Find X6', 'X90 Pro', 'Galaxy S23', 'OnePlus 11'];
-            return models[Math.floor(Math.random() * models.length)];
-        } else if (sys.platform === sys.Platform.IOS) {
-            const models = ['iPhone 14 Pro', 'iPhone 14', 'iPhone 13 Pro', 'iPhone 13'];
-            return models[Math.floor(Math.random() * models.length)];
-        }
-        return 'Unknown Model';
-    }
-
-    /**
-     * 获取操作系统版本
-     */
-    private getOSVersion(): string {
-        return sys.osVersion || 'Unknown';
     }
 
     /**
@@ -218,131 +404,6 @@ export class DeviceInfoCollector extends Component {
     }
 
     /**
-     * 获取渠道信息
-     */
-    private getChannel(): string {
-        // 在实际项目中，这通常在打包时配置
-        const channels = ['官方', '应用宝', '华为商店', 'App Store', '小米商店'];
-        return channels[Math.floor(Math.random() * channels.length)];
-    }
-
-    /**
-     * 获取IP地址
-     */
-    private async getIPAddress(): Promise<string> {
-        try {
-            // 在实际项目中，可以通过网络请求获取公网IP
-            // 这里返回模拟数据
-            return `192.168.1.${Math.floor(Math.random() * 255)}`;
-        } catch (error) {
-            log('获取IP地址失败:', error);
-            return 'Unknown';
-        }
-    }
-
-    /**
-     * 获取IP位置信息
-     */
-    private async getIPLocation(): Promise<string> {
-        try {
-            // 在实际项目中，通过IP定位服务获取
-            const locations = ['北京市', '上海市', '广州市', '深圳市', '杭州市', '成都市'];
-            return locations[Math.floor(Math.random() * locations.length)];
-        } catch (error) {
-            log('获取IP位置失败:', error);
-            return 'Unknown';
-        }
-    }
-
-    /**
-     * 检测是否有陀螺仪
-     */
-    private hasGyroscope(): boolean {
-        // 在实际项目中，需要通过原生插件检测
-        return sys.isMobile; // 移动设备通常都有陀螺仪
-    }
-
-    /**
-     * 检测是否为调试模式
-     */
-    private isDebugMode(): boolean {
-        // 简单的调试模式检测，在实际项目中可以根据需要调整
-        return sys.platform === sys.Platform.DESKTOP_BROWSER || 
-               sys.platform === sys.Platform.MOBILE_BROWSER;
-    }
-
-    /**
-     * 检测设备是否已Root/越狱
-     */
-    private isRooted(): boolean {
-        // 在实际项目中，需要通过原生插件检测
-        return Math.random() > 0.8; // 模拟20%的设备已Root
-    }
-
-    /**
-     * 检测是否正在充电
-     */
-    private isCharging(): boolean {
-        // 在实际项目中，需要通过原生插件获取电池状态
-        return Math.random() > 0.5; // 模拟50%概率正在充电
-    }
-
-    /**
-     * 检测是否连接VPN
-     */
-    private isVPNConnected(): boolean {
-        // 在实际项目中，需要通过原生插件检测网络状态
-        return Math.random() > 0.9; // 模拟10%概率使用VPN
-    }
-
-    /**
-     * 检测数据是否清洁（无篡改）
-     */
-    private isCleanData(): boolean {
-        // 在实际项目中，通过完整性检查
-        return Math.random() > 0.1; // 模拟90%数据清洁
-    }
-
-    /**
-     * 检测网络连接状态
-     */
-    private hasNetworkConnection(): boolean {
-        // Cocos Creator可以检测网络状态
-        return true; // 假设有网络连接
-    }
-
-    /**
-     * 检测WiFi连接状态
-     */
-    private isWiFiConnected(): boolean {
-        // 在实际项目中，需要通过原生插件检测
-        return Math.random() > 0.3; // 模拟70%概率连接WiFi
-    }
-
-    /**
-     * 获取联分（信用分数）
-     */
-    private getLianScore(): number {
-        // 模拟信用分数 0-1000
-        return Math.floor(Math.random() * 1000);
-    }
-
-    /**
-     * 生成模拟ID
-     */
-    private generateMockId(type: string): string {
-        const chars = '0123456789abcdef';
-        let result = '';
-        const length = type === 'android' ? 16 : 36;
-        
-        for (let i = 0; i < length; i++) {
-            result += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        
-        return result;
-    }
-
-    /**
      * 获取缓存的设备信息
      */
     public getCachedDeviceInfo(): DeviceInfo | null {
@@ -354,6 +415,9 @@ export class DeviceInfoCollector extends Component {
      */
     public clearCache(): void {
         this.cachedDeviceInfo = null;
+        this.deviceInfoPromise = null;
+        this.resolveDeviceInfoPromise = null;
+        this.rejectDeviceInfoPromise = null;
         log('设备信息缓存已清除');
     }
 } 

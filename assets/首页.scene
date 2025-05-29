@@ -4207,10 +4207,10 @@
       "b": 0,
       "a": 255
     },
-    "_string": "9454812.68",
+    "_string": "94412.68",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 23,
+    "_actualFontSize": 29,
     "_fontSize": 34,
     "_fontFamily": "PingFang SC",
     "_lineHeight": 40,
@@ -5910,7 +5910,7 @@
     "_id": "e2FRIfbVZGt5Lvf9TrkcOX"
   },
   {
-    "__type__": "25f5cF9HHdEJJkI/fnrryQJ",
+    "__type__": "7ed15ej8CVF67LJdgn7KaHs",
     "_name": "",
     "_objFlags": 0,
     "__editorExtras__": {},
@@ -5919,17 +5919,18 @@
     },
     "_enabled": true,
     "__prefab": null,
-    "testConnectionBtn": {
+    "collectButton": {
       "__id__": 84
     },
-    "initDeviceInfoBtn": {
+    "getAndroidIdButton": {
       "__id__": 89
     },
-    "sendInfoLogBtn": {
+    "getSimInfoButton": null,
+    "sendToServerButton": {
       "__id__": 94
     },
-    "statusLabel": null,
-    "_id": "26A70Sy5tMF4hUIWaMB0Q7"
+    "resultLabel": null,
+    "_id": "5edjwVZPBN04HhmmPxAZWw"
   },
   {
     "__type__": "cc.SceneGlobals",
