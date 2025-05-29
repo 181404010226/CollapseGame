@@ -162,9 +162,9 @@
     "_linearVelocity": {
       "__type__": "cc.Vec2",
       "x": 1.0058094801479456e-8,
-      "y": -105.16643524169922
+      "y": 0
     },
-    "_angularVelocity": -6.177876957297888e-9,
+    "_angularVelocity": 0,
     "_fixedRotation": false,
     "_id": ""
   },

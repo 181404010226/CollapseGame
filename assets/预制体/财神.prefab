@@ -161,10 +161,10 @@
     "_angularDamping": 0,
     "_linearVelocity": {
       "__type__": "cc.Vec2",
-      "x": -5.298041969581391e-7,
+      "x": 0,
       "y": 1.9419815089349868e-8
     },
-    "_angularVelocity": -6.189624467105084e-9,
+    "_angularVelocity": 0,
     "_fixedRotation": false,
     "_id": ""
   },
