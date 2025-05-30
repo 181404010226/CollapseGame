@@ -3,5 +3,24 @@
   "uuid": "53d9a182-dff8-4ce5-894d-b543e397cb3a",
   "creator": {
     "version": "3.8.6"
-  }
+  },
+  "description": "Cocos Creator project with API encryption support",
+  "main": "index.js",
+  "scripts": {
+    "install-deps": "npm install"
+  },
+  "dependencies": {
+    "crypto-es": "^2.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0"
+  },
+  "keywords": [
+    "cocos-creator",
+    "encryption",
+    "api",
+    "security"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
 }
