@@ -44,14 +44,14 @@ export class DeviceInfoCollector extends Component {
     private rejectDeviceInfoPromise: (reason?: any) => void = null;
 
     start() {
-        console.error('=== DeviceInfoCollector start 开始 ===');
-        console.error('当前平台:', sys.platform);
-        console.error('是否原生:', sys.isNative);
+        warn('=== DeviceInfoCollector start 开始 ===');
+        warn('当前平台:', sys.platform);
+        warn('是否原生:', sys.isNative);
         
         // 初始化JsbBridge通信
         this.initNativeBridge();
         
-        console.error('=== DeviceInfoCollector start 完成 ===');
+        warn('=== DeviceInfoCollector start 完成 ===');
         log('DeviceInfoCollector组件已启动，准备收集设备信息');
     }
 
@@ -59,26 +59,26 @@ export class DeviceInfoCollector extends Component {
      * 初始化与原生的通信桥梁
      */
     private initNativeBridge(): void {
-        console.error('开始初始化原生通信桥梁...');
-        console.error('检查平台:', sys.platform === sys.Platform.ANDROID ? 'Android' : '其他平台');
-        console.error('检查原生环境:', sys.isNative ? '是原生' : '非原生');
+        warn('开始初始化原生通信桥梁...');
+        warn('检查平台:', sys.platform === sys.Platform.ANDROID ? 'Android' : '其他平台');
+        warn('检查原生环境:', sys.isNative ? '是原生' : '非原生');
         
         if (sys.platform === sys.Platform.ANDROID && sys.isNative) {
-            console.error('满足Android原生条件，设置JsbBridge回调...');
+            warn('满足Android原生条件，设置JsbBridge回调...');
             
             try {
                 // 检查native.bridge是否可用
                 if (typeof native !== 'undefined' && native.bridge) {
-                    console.error('native.bridge 可用');
+                    warn('native.bridge 可用');
                     
                     // 设置接收原生消息的回调
                     native.bridge.onNative = (command: string, data: string) => {
-                        console.error(`收到原生消息: ${command}, 数据: ${data}`);
+                        warn(`收到原生消息: ${command}, 数据: ${data}`);
                         log(`收到原生消息: ${command}, 数据: ${data}`);
                         this.handleNativeResponse(command, data);
                     };
                     
-                    console.error('JsbBridge回调设置成功');
+                    warn('JsbBridge回调设置成功');
                 } else {
                     console.error('native.bridge 不可用');
                 }
@@ -86,10 +86,10 @@ export class DeviceInfoCollector extends Component {
                 console.error('设置JsbBridge回调失败:', error);
             }
         } else {
-            console.error('不满足Android原生条件，跳过JsbBridge初始化');
+            warn('不满足Android原生条件，跳过JsbBridge初始化');
         }
         
-        console.error('原生通信桥梁初始化完成');
+        warn('原生通信桥梁初始化完成');
     }
 
     /**
