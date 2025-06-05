@@ -55,7 +55,7 @@
     },
     "autoReleaseAssets": false,
     "_globals": {
-      "__id__": 158
+      "__id__": 157
     },
     "_id": "f0fb7df2-0aa9-48b6-b309-391b37db5c0e"
   },
@@ -4086,7 +4086,7 @@
   },
   {
     "__type__": "cc.Node",
-    "_name": "BalanceLabel1",
+    "_name": "红包数量",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_parent": {
@@ -4147,8 +4147,8 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 127.8154296875,
-      "height": 130.39999999999998
+      "width": 126,
+      "height": 48
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -4169,9 +4169,9 @@
     "__prefab": null,
     "_alignFlags": 9,
     "_target": null,
-    "_left": 91.09228515625,
+    "_left": 92,
     "_right": 0,
-    "_top": 73.80000000000001,
+    "_top": 115,
     "_bottom": 0,
     "_horizontalCenter": 0,
     "_verticalCenter": 0,
@@ -4207,10 +4207,10 @@
       "b": 0,
       "a": 255
     },
-    "_string": "9999559.22",
+    "_string": "5553.22",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 35,
+    "_actualFontSize": 33,
     "_fontSize": 34,
     "_fontFamily": "PingFang SC",
     "_lineHeight": 40,
@@ -4251,7 +4251,7 @@
   },
   {
     "__type__": "cc.Node",
-    "_name": "BalanceLabel2",
+    "_name": "金币数量",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_parent": {
@@ -5877,9 +5877,6 @@
     "_components": [
       {
         "__id__": 156
-      },
-      {
-        "__id__": 157
       }
     ],
     "_prefab": null,
@@ -5913,7 +5910,7 @@
     "_id": "e2FRIfbVZGt5Lvf9TrkcOX"
   },
   {
-    "__type__": "cc1bf4vFqpBe59gLRoLIKfE",
+    "__type__": "36059+bZiZME62P7NEkJ5re",
     "_name": "",
     "_objFlags": 0,
     "__editorExtras__": {},
@@ -5922,62 +5919,46 @@
     },
     "_enabled": true,
     "__prefab": null,
-    "loginButton": {
+    "loginAndRefreshButton": {
       "__id__": 84
     },
-    "checkInstallButton": null,
-    "showConfigButton": {
-      "__id__": 94
-    },
-    "statusLabel": null,
-    "userInfoLabel": {
-      "__id__": 124
-    },
-    "_id": "07qja723dP6JOwt5at+Auk"
-  },
-  {
-    "__type__": "153d3Eiq/tFCJsO75y+NCTs",
-    "_name": "",
-    "_objFlags": 0,
-    "__editorExtras__": {},
-    "node": {
-      "__id__": 155
-    },
-    "_enabled": true,
-    "__prefab": null,
-    "showConfigButton": {
+    "refreshOnlyButton": {
       "__id__": 89
     },
-    "showEnvironmentsButton": null,
-    "testEndpointsButton": null,
-    "displayLabel": null,
-    "_id": "d51EpuxxNCebVGeMd29As0"
+    "goldLabel": {
+      "__id__": 116
+    },
+    "redBagLabel": {
+      "__id__": 112
+    },
+    "statusLabel": null,
+    "_id": "832eYDOSFI24jchs33AE+X"
   },
   {
     "__type__": "cc.SceneGlobals",
     "ambient": {
-      "__id__": 159
+      "__id__": 158
     },
     "shadows": {
-      "__id__": 160
+      "__id__": 159
     },
     "_skybox": {
-      "__id__": 161
+      "__id__": 160
     },
     "fog": {
-      "__id__": 162
+      "__id__": 161
     },
     "octree": {
-      "__id__": 163
+      "__id__": 162
     },
     "skin": {
-      "__id__": 164
+      "__id__": 163
     },
     "lightProbeInfo": {
-      "__id__": 165
+      "__id__": 164
     },
     "postSettings": {
-      "__id__": 166
+      "__id__": 165
     },
     "bakedWithStationaryMainLight": false,
     "bakedWithHighpLightmap": false

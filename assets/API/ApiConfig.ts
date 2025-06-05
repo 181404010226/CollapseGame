@@ -58,7 +58,7 @@ export class ApiConfig {
 
     // 应用配置
     public static readonly APP_CONFIG: AppConfig = {
-        packageName: 'com.shhanyin.lxx',
+        packageName: 'com.schanyin.tgcf',
         currentVersion: 100,
         versionName: '1.0.0'
     };
@@ -80,6 +80,9 @@ export class ApiConfig {
         
         // 设备相关
         DEVICE_REPORT: '/device/report',
+        
+        // 账户相关
+        GET_ACCOUNT_INFO: '/home/getAccountInfo',
         
         // 其他端点...
     };

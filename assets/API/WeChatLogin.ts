@@ -25,10 +25,17 @@ interface WeChatAuthResult {
 
 // 后端API响应接口
 interface LoginApiResponse {
-    openid: string;
-    access_token: string;
-    expire_in: number;
-    client_id: string;
+    msg: string;
+    code: number;
+    data: {
+        openid: string;
+        wechatNickname: string;
+        wechatAvatar: string;
+        isRealName: boolean | null;
+        access_token: string;
+        expire_in: number;
+        client_id: string | null;
+    };
 }
 
 /**
@@ -189,9 +196,12 @@ export class WeChatLogin extends Component {
             log('=== 开始调用后端API获取access_token ===');
             log(`授权码: ${code}`);
             
-            // 使用ApiConfig构建API URL
-            const apiUrl = ApiConfig.getFullUrl(ApiConfig.ENDPOINTS.WECHAT_LOGIN) + `?code=${encodeURIComponent(code)}`;
+            // 使用ApiConfig构建API URL，添加code和packageName参数
+            const packageName = ApiConfig.getPackageName();
+            const apiUrl = ApiConfig.getFullUrl(ApiConfig.ENDPOINTS.WECHAT_LOGIN) + 
+                `?code=${encodeURIComponent(code)}&packageName=${encodeURIComponent(packageName)}`;
             log(`请求URL: ${apiUrl}`);
+            log(`包名参数: ${packageName}`);
             
             const requestHeaders = {
                 'Content-Type': 'application/json',
@@ -227,27 +237,45 @@ export class WeChatLogin extends Component {
                 const apiResult: LoginApiResponse = JSON.parse(responseText);
                 log('=== 后端API返回成功 ===');
                 log('解析后的响应数据:', apiResult);
-                log(`获得openid: ${apiResult.openid}`);
-                log(`获得access_token: ${apiResult.access_token ? '已获取' : '未获取'}`);
-                log(`token过期时间: ${apiResult.expire_in}秒`);
-                log(`client_id: ${apiResult.client_id}`);
                 
-                // 登录成功，返回结果
-                if (this.loginCallback) {
-                    const successResult: WeChatLoginResult = {
-                        success: true,
-                        openid: apiResult.openid,
-                        access_token: apiResult.access_token,
-                        expire_in: apiResult.expire_in,
-                        client_id: apiResult.client_id,
-                        code: code
-                    };
+                // 检查后端返回的状态码
+                if (apiResult.code === 200 && apiResult.data) {
+                    const userData = apiResult.data;
+                    log(`获得openid: ${userData.openid}`);
+                    log(`获得access_token: ${userData.access_token ? '已获取' : '未获取'}`);
+                    log(`token过期时间: ${userData.expire_in}秒`);
+                    log(`client_id: ${userData.client_id}`);
+                    log(`微信昵称: ${userData.wechatNickname}`);
+                    log(`微信头像: ${userData.wechatAvatar}`);
                     
-                    log('=== 微信登录流程完成，返回最终结果 ===');
-                    log('最终登录结果:', successResult);
-                    
-                    this.loginCallback(successResult);
-                    this.loginCallback = null;
+                    // 登录成功，返回结果
+                    if (this.loginCallback) {
+                        const successResult: WeChatLoginResult = {
+                            success: true,
+                            openid: userData.openid,
+                            access_token: userData.access_token,
+                            expire_in: userData.expire_in,
+                            client_id: userData.client_id,
+                            code: code
+                        };
+                                            
+                        log('=== 微信登录流程完成，返回最终结果 ===');
+                        log('最终登录结果:', successResult);
+                        
+                        this.loginCallback(successResult);
+                        this.loginCallback = null;
+                    }
+                } else {
+                    // 后端返回的业务状态码不是200
+                    warn(`后端业务逻辑失败: ${apiResult.code} - ${apiResult.msg}`);
+                    if (this.loginCallback) {
+                        this.loginCallback({
+                            success: false,
+                            error: `登录失败: ${apiResult.msg}`,
+                            code: code
+                        });
+                        this.loginCallback = null;
+                    }
                 }
             } else {
                 log('>>> HTTP请求失败 <<<');
