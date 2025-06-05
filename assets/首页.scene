@@ -55,7 +55,7 @@
     },
     "autoReleaseAssets": false,
     "_globals": {
-      "__id__": 157
+      "__id__": 158
     },
     "_id": "f0fb7df2-0aa9-48b6-b309-391b37db5c0e"
   },
@@ -4148,7 +4148,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 127.8154296875,
-      "height": 50.4
+      "height": 130.39999999999998
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -4171,7 +4171,7 @@
     "_target": null,
     "_left": 91.09228515625,
     "_right": 0,
-    "_top": 113.8,
+    "_top": 73.80000000000001,
     "_bottom": 0,
     "_horizontalCenter": 0,
     "_verticalCenter": 0,
@@ -4207,10 +4207,10 @@
       "b": 0,
       "a": 255
     },
-    "_string": "99999.22",
+    "_string": "9999559.22",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 29,
+    "_actualFontSize": 35,
     "_fontSize": 34,
     "_fontFamily": "PingFang SC",
     "_lineHeight": 40,
@@ -5877,6 +5877,9 @@
     "_components": [
       {
         "__id__": 156
+      },
+      {
+        "__id__": 157
       }
     ],
     "_prefab": null,
@@ -5910,7 +5913,7 @@
     "_id": "e2FRIfbVZGt5Lvf9TrkcOX"
   },
   {
-    "__type__": "6ba4cBVc7tIaI3hcVzKpCJZ",
+    "__type__": "cc1bf4vFqpBe59gLRoLIKfE",
     "_name": "",
     "_objFlags": 0,
     "__editorExtras__": {},
@@ -5919,43 +5922,62 @@
     },
     "_enabled": true,
     "__prefab": null,
-    "testSignatureButton": {
+    "loginButton": {
       "__id__": 84
     },
-    "getVersionButton": {
-      "__id__": 89
-    },
-    "getKeyInfoButton": {
+    "checkInstallButton": null,
+    "showConfigButton": {
       "__id__": 94
     },
-    "resultLabel": null,
-    "_id": "3adApQxzpE1691C9n1XWPC"
+    "statusLabel": null,
+    "userInfoLabel": {
+      "__id__": 124
+    },
+    "_id": "07qja723dP6JOwt5at+Auk"
+  },
+  {
+    "__type__": "153d3Eiq/tFCJsO75y+NCTs",
+    "_name": "",
+    "_objFlags": 0,
+    "__editorExtras__": {},
+    "node": {
+      "__id__": 155
+    },
+    "_enabled": true,
+    "__prefab": null,
+    "showConfigButton": {
+      "__id__": 89
+    },
+    "showEnvironmentsButton": null,
+    "testEndpointsButton": null,
+    "displayLabel": null,
+    "_id": "d51EpuxxNCebVGeMd29As0"
   },
   {
     "__type__": "cc.SceneGlobals",
     "ambient": {
-      "__id__": 158
-    },
-    "shadows": {
       "__id__": 159
     },
-    "_skybox": {
+    "shadows": {
       "__id__": 160
     },
-    "fog": {
+    "_skybox": {
       "__id__": 161
     },
-    "octree": {
+    "fog": {
       "__id__": 162
     },
-    "skin": {
+    "octree": {
       "__id__": 163
     },
-    "lightProbeInfo": {
+    "skin": {
       "__id__": 164
     },
-    "postSettings": {
+    "lightProbeInfo": {
       "__id__": 165
+    },
+    "postSettings": {
+      "__id__": 166
     },
     "bakedWithStationaryMainLight": false,
     "bakedWithHighpLightmap": false

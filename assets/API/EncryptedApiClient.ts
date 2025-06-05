@@ -1,6 +1,7 @@
 import { _decorator, Component, log, warn, sys } from 'cc';
 import CryptoES from 'crypto-es';
 import { DeviceInfoCollector, DeviceInfo } from './DeviceInfoCollector';
+import { ApiConfig } from './ApiConfig';
 
 const { ccclass, property } = _decorator;
 
@@ -46,18 +47,6 @@ export interface ApiResponse<T> {
 @ccclass('EncryptedApiClient')
 export class EncryptedApiClient extends Component {
     
-    @property
-    private apiBaseUrl: string = 'http://101.133.145.244:7071';
-    
-    @property
-    private timeout: number = 10000; // 10秒超时
-    
-    @property
-    private packageName: string = 'com.shhanyin.lxx';
-    
-    @property
-    private currentVersion: number = 100;
-    
     // 密钥加固存储 - 使用多层编码和混淆（修正后的Base64编码）
     private readonly SECRET_PARTS = [
         'ODtqIWg3WA==', // 8;j!h7X
@@ -70,6 +59,9 @@ export class EncryptedApiClient extends Component {
     
     start() {
         log('EncryptedApiClient 已启动');
+        
+        // 打印当前配置信息
+        ApiConfig.printCurrentConfig();
         
         // 获取设备信息收集器
         this.deviceInfoCollector = this.getComponent(DeviceInfoCollector);
@@ -168,9 +160,9 @@ export class EncryptedApiClient extends Component {
                 }
 
                 const xhr = new XMLHttpRequest();
-                const url = this.apiBaseUrl + endpoint;
+                const url = ApiConfig.getFullUrl(endpoint);
                 
-                xhr.timeout = this.timeout;
+                xhr.timeout = ApiConfig.getTimeout();
                 xhr.ontimeout = () => {
                     reject(new Error('请求超时'));
                 };
@@ -228,8 +220,8 @@ export class EncryptedApiClient extends Component {
                 requestId: this.generateRequestId(),
                 timeStamp: Date.now().toString(),
                 platform: this.getPlatform(),
-                packageName: this.packageName,
-                version: this.currentVersion
+                packageName: ApiConfig.getPackageName(),
+                version: ApiConfig.getCurrentVersion()
             };
 
             // 验证时间戳
@@ -240,10 +232,10 @@ export class EncryptedApiClient extends Component {
             log('请求参数:', requestData);
 
             // 发送请求
-            const response = await this.sendSignedRequest<GetVersionResponse>('/home/getVersion', requestData);
+            const response = await this.sendSignedRequest<GetVersionResponse>(ApiConfig.ENDPOINTS.GET_VERSION, requestData);
             
-            // 根据服务器实际响应格式判断成功：code=200且有data
-            if (response.code === 200 && response.data) {
+            // 使用ApiConfig判断响应是否成功
+            if (ApiConfig.isResponseSuccess(response.code) && response.data) {
                 log('版本信息获取成功:', response.data);
                 return response.data;
             } else {
@@ -270,26 +262,48 @@ export class EncryptedApiClient extends Component {
     }
 
     /**
-     * 设置API基础URL
+     * 获取当前API配置信息
+     */
+    public getCurrentConfig(): object {
+        return {
+            environment: ApiConfig.getCurrentEnvironment(),
+            packageName: ApiConfig.getPackageName(),
+            version: ApiConfig.getCurrentVersion(),
+            versionName: ApiConfig.getVersionName()
+        };
+    }
+
+    /**
+     * 获取API基础URL（向后兼容）
+     */
+    public getApiBaseUrl(): string {
+        return ApiConfig.getBaseUrl();
+    }
+
+    /**
+     * 设置API基础URL（向后兼容，但建议直接修改ApiConfig）
+     * @deprecated 建议直接修改ApiConfig.ts中的配置
      */
     public setApiBaseUrl(url: string): void {
-        this.apiBaseUrl = url;
-        log('API基础URL已更新为:', url);
+        warn('setApiBaseUrl方法已过时，建议直接修改ApiConfig.ts中的配置');
+        log('当前API基础URL:', ApiConfig.getBaseUrl());
     }
 
     /**
-     * 设置包名
+     * 设置包名（向后兼容，但建议直接修改ApiConfig）
+     * @deprecated 建议直接修改ApiConfig.ts中的配置
      */
     public setPackageName(packageName: string): void {
-        this.packageName = packageName;
-        log('包名已更新为:', packageName);
+        warn('setPackageName方法已过时，建议直接修改ApiConfig.ts中的配置');
+        log('当前包名:', ApiConfig.getPackageName());
     }
 
     /**
-     * 设置当前版本号
+     * 设置当前版本号（向后兼容，但建议直接修改ApiConfig）
+     * @deprecated 建议直接修改ApiConfig.ts中的配置
      */
     public setCurrentVersion(version: number): void {
-        this.currentVersion = version;
-        log('版本号已更新为:', version);
+        warn('setCurrentVersion方法已过时，建议直接修改ApiConfig.ts中的配置');
+        log('当前版本号:', ApiConfig.getCurrentVersion());
     }
 } 
