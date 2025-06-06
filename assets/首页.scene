@@ -5910,7 +5910,7 @@
     "_id": "e2FRIfbVZGt5Lvf9TrkcOX"
   },
   {
-    "__type__": "36059+bZiZME62P7NEkJ5re",
+    "__type__": "4b7b5c2VlhHqI+AHNptKwyI",
     "_name": "",
     "_objFlags": 0,
     "__editorExtras__": {},
@@ -5919,20 +5919,20 @@
     },
     "_enabled": true,
     "__prefab": null,
-    "loginAndRefreshButton": {
-      "__id__": 84
+    "initButton": {
+      "__id__": 94
     },
-    "refreshOnlyButton": {
+    "loadAdButton": null,
+    "showAdButton": {
       "__id__": 89
     },
-    "goldLabel": {
-      "__id__": 116
-    },
-    "redBagLabel": {
-      "__id__": 112
+    "checkAdButton": null,
+    "destroyAdButton": null,
+    "quickShowButton": {
+      "__id__": 84
     },
     "statusLabel": null,
-    "_id": "832eYDOSFI24jchs33AE+X"
+    "_id": "46K+/u0v1G1LigxDdZqEUh"
   },
   {
     "__type__": "cc.SceneGlobals",
