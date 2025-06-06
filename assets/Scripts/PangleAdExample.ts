@@ -1,4 +1,4 @@
-import { _decorator, Component, Node, Button, Label, log, error } from 'cc';
+import { _decorator, Component, Node, Button, Label, log } from 'cc';
 import { PangleAdManager, PangleAdEventCallback, PangleAd } from './PangleAdManager';
 
 const { ccclass, property } = _decorator;
@@ -138,7 +138,7 @@ export class PangleAdExample extends Component {
             }
         } catch (err) {
             this.updateStatus(`SDK初始化异常: ${err.message}`);
-            error('SDK初始化异常:', err);
+            console.error('SDK初始化异常:', err);
         }
     }
 
@@ -162,7 +162,7 @@ export class PangleAdExample extends Component {
             }
         } catch (err) {
             this.updateStatus(`加载广告异常: ${err.message}`);
-            error('加载广告异常:', err);
+            console.error('加载广告异常:', err);
         }
     }
 
@@ -186,7 +186,7 @@ export class PangleAdExample extends Component {
             }
         } catch (err) {
             this.updateStatus(`展示广告异常: ${err.message}`);
-            error('展示广告异常:', err);
+            console.error('展示广告异常:', err);
         }
     }
 
@@ -206,7 +206,7 @@ export class PangleAdExample extends Component {
             this.updateStatus(`广告状态: ${isReady ? '已准备' : '未准备'}`);
         } catch (err) {
             this.updateStatus(`检查广告状态异常: ${err.message}`);
-            error('检查广告状态异常:', err);
+            console.error('检查广告状态异常:', err);
         }
     }
 
@@ -255,7 +255,7 @@ export class PangleAdExample extends Component {
             }
         } catch (err) {
             this.updateStatus(`快速展示广告异常: ${err.message}`);
-            error('快速展示广告异常:', err);
+            console.error('快速展示广告异常:', err);
         }
     }
 

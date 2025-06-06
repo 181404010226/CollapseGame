@@ -1,4 +1,4 @@
-import { _decorator, Component, log, warn, error } from 'cc';
+import { _decorator, Component, log, warn } from 'cc';
 import { native } from 'cc';
 
 const { ccclass, property } = _decorator;
@@ -54,38 +54,141 @@ export class PangleAdManager extends Component {
         log('PangleAdManager 已初始化');
     }
     
+    onLoad() {
+        // 确保在游戏加载时也注册回调
+        log('PangleAdManager onLoad - 开始注册回调');
+        this.registerNativeCallbacks();
+    }
+    
     /**
      * 注册原生回调
      */
-    private registerNativeCallbacks() {
-        // 使用 native.bridge.onNative 注册回调，这是Cocos Creator 3.8.x的正确方式
+    public registerNativeCallbacks() {
+        log('开始注册原生回调...');
+        
+        // 先检查当前环境
+        log(`当前环境检查:`);
+        log(`- typeof native: ${typeof native}`);
+        log(`- native.bridge: ${typeof native !== 'undefined' ? !!native.bridge : 'N/A'}`);
+        log(`- typeof jsb: ${typeof jsb}`);
+        log(`- typeof window: ${typeof window}`);
+        log(`- typeof globalThis: ${typeof globalThis}`);
+        
+        // 方法1: 使用 native.bridge.onNative 注册回调 (Cocos Creator 3.8.6推荐)
         if (typeof native !== 'undefined' && native.bridge) {
             native.bridge.onNative = (command: string, data: string) => {
                 try {
-                    log(`收到原生回调: ${command} -> ${data}`);
+                    log(`收到原生回调 (native.bridge): ${command} -> ${data}`);
                     this.handleNativeCallback(command, data);
                 } catch (e) {
-                    error('处理原生回调失败:', e);
+                    console.error('处理原生回调失败:', e);
                 }
             };
             
-            log('原生回调已注册 (使用 native.bridge.onNative)');
+            log('✅ 原生回调已注册 (使用 native.bridge.onNative)');
         } else {
-            // 备用方案：使用全局函数注册回调
-            if (typeof window !== 'undefined') {
-                (window as any).onPangleCallback = (command: string, data: string) => {
-                    try {
-                        log(`收到原生回调: ${command} -> ${data}`);
-                        this.handleNativeCallback(command, data);
-                    } catch (e) {
-                        error('处理原生回调失败:', e);
-                    }
-                };
-                
-                warn('使用备用方案注册原生回调 (window.onPangleCallback)');
+            log('❌ native.bridge 不可用');
+        }
+        
+        // 方法2: JsbBridge兼容性 - 通过setCallback注册
+        try {
+            if (typeof jsb !== 'undefined' && (jsb as any).bridge) {
+                // 确保JsbBridge的setCallback正确工作
+                const jsbBridge = (jsb as any).bridge;
+                if (jsbBridge.setCallback) {
+                    const callback = {
+                        onScript: (command: string, data: string) => {
+                            try {
+                                log(`收到原生回调 (jsb.bridge): ${command} -> ${data}`);
+                                this.handleNativeCallback(command, data);
+                            } catch (e) {
+                                console.error('处理原生回调失败:', e);
+                            }
+                        }
+                    };
+                    jsbBridge.setCallback(callback);
+                    log('✅ JsbBridge回调已通过setCallback注册');
+                } else {
+                    // 备用方式：直接设置onNative
+                    jsbBridge.onNative = (command: string, data: string) => {
+                        try {
+                            log(`收到原生回调 (jsb.bridge.onNative): ${command} -> ${data}`);
+                            this.handleNativeCallback(command, data);
+                        } catch (e) {
+                            console.error('处理原生回调失败:', e);
+                        }
+                    };
+                    log('✅ JsbBridge回调已通过onNative注册');
+                }
             } else {
-                warn('当前平台不支持原生回调');
+                log('❌ jsb.bridge 不可用');
             }
+        } catch (e) {
+            log('❌ JsbBridge注册失败:', e);
+        }
+        
+        // 方法3: 同时注册全局函数回调（确保兼容性）
+        if (typeof window !== 'undefined') {
+            (window as any).onPangleCallback = (command: string, data: string) => {
+                try {
+                    log(`收到原生回调 (window.onPangleCallback): ${command} -> ${data}`);
+                    this.handleNativeCallback(command, data);
+                } catch (e) {
+                    console.error('处理原生回调失败:', e);
+                }
+            };
+            
+            log('✅ 备用回调已注册 (window.onPangleCallback)');
+        } else {
+            log('❌ window 不可用');
+        }
+        
+        // 方法4: globalThis回调（确保完全兼容）
+        if (typeof globalThis !== 'undefined') {
+            (globalThis as any).onPangleCallback = (command: string, data: string) => {
+                try {
+                    log(`收到原生回调 (globalThis): ${command} -> ${data}`);
+                    this.handleNativeCallback(command, data);
+                } catch (e) {
+                    console.error('处理原生回调失败:', e);
+                }
+            };
+            
+            log('✅ GlobalThis回调已注册');
+        } else {
+            log('❌ globalThis 不可用');
+        }
+        
+        // 强制调用一次测试
+        log('回调注册完成，进行测试调用...');
+        setTimeout(() => {
+            this.testCallbacks();
+        }, 100);
+    }
+    
+    /**
+     * 测试回调是否正常工作
+     */
+    private testCallbacks() {
+        log('测试回调函数是否正常...');
+        
+        // 检查所有回调是否都正确设置
+        if (typeof native !== 'undefined' && native.bridge && native.bridge.onNative) {
+            log('✅ native.bridge.onNative 存在');
+        } else {
+            log('❌ native.bridge.onNative 不存在');
+        }
+        
+        if (typeof window !== 'undefined' && (window as any).onPangleCallback) {
+            log('✅ window.onPangleCallback 存在');
+        } else {
+            log('❌ window.onPangleCallback 不存在');
+        }
+        
+        if (typeof globalThis !== 'undefined' && (globalThis as any).onPangleCallback) {
+            log('✅ globalThis.onPangleCallback 存在');
+        } else {
+            log('❌ globalThis.onPangleCallback 不存在');
         }
     }
     
@@ -348,17 +451,29 @@ export class PangleAdManager extends Component {
      * 发送命令到原生端
      */
     private sendToNative(command: string, data: string) {
+        // 方法1: 优先使用native.bridge.sendToNative (Cocos Creator 3.8.6推荐)
         if (typeof native !== 'undefined' && native.bridge) {
             try {
-                // 使用native.bridge.sendToNative方法，这是Cocos Creator 3.8.x的正确方式
                 native.bridge.sendToNative(command, data);
-                log(`发送到原生端: ${command} -> ${data}`);
+                log(`发送到原生端 (native.bridge): ${command} -> ${data}`);
+                return;
             } catch (e) {
-                error('发送到原生端失败:', e);
+                console.error('native.bridge发送失败:', e);
             }
-        } else {
-            warn('当前平台不支持原生桥接');
         }
+        
+        // 方法2: 尝试使用jsb.bridge作为备用
+        try {
+            if (typeof jsb !== 'undefined' && (jsb as any).bridge) {
+                (jsb as any).bridge.sendToNative(command, data);
+                log(`发送到原生端 (jsb.bridge): ${command} -> ${data}`);
+                return;
+            }
+        } catch (e) {
+            console.error('jsb.bridge发送失败:', e);
+        }
+        
+        warn('当前平台不支持原生桥接');
     }
     
     onDestroy() {
@@ -379,6 +494,16 @@ export namespace PangleAd {
      */
     export function getInstance(): PangleAdManager {
         return PangleAdManager.getInstance();
+    }
+    
+    /**
+     * 确保管理器被初始化（立即注册回调）
+     */
+    export function ensureInitialized() {
+        const manager = PangleAdManager.getInstance();
+        manager.registerNativeCallbacks();
+        log('PangleAd.ensureInitialized() - 强制注册回调完成');
+        return manager;
     }
     
     /**
@@ -416,7 +541,7 @@ export namespace PangleAd {
             log('开始展示开屏广告...');
             return await manager.showSplashAd();
         } catch (error) {
-            error('展示开屏广告失败:', error);
+            console.error('展示开屏广告失败:', error);
             return false;
         }
     }
