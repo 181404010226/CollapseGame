@@ -4207,10 +4207,10 @@
       "b": 0,
       "a": 255
     },
-    "_string": "44.2299",
+    "_string": "44.999",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 33,
+    "_actualFontSize": 35,
     "_fontSize": 34,
     "_fontFamily": "PingFang SC",
     "_lineHeight": 40,
@@ -4372,7 +4372,7 @@
       "b": 0,
       "a": 255
     },
-    "_string": "92.68",
+    "_string": "99",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
     "_actualFontSize": 35,
@@ -5934,7 +5934,9 @@
     "quickShowButton": {
       "__id__": 84
     },
-    "statusLabel": null,
+    "statusLabel": {
+      "__id__": 136
+    },
     "_id": "46K+/u0v1G1LigxDdZqEUh"
   },
   {

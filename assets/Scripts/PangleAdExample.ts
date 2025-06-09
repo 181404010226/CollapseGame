@@ -264,24 +264,43 @@ export class PangleAdExample extends Component {
      */
     private handleAdClose(closeType: number) {
         // 根据关闭类型处理不同的业务逻辑
+        let message = '';
+        let hasWatchedCompletely = false;
+        
         switch (closeType) {
             case 1:
-                // 用户主动关闭
-                log('用户主动关闭广告，可能没有获得奖励');
+                // 用户主动关闭（点击跳过）
+                message = '用户点击跳过，未看完广告';
+                hasWatchedCompletely = false;
+                log('用户主动关闭广告，未获得奖励 - 关闭类型: 1 (用户跳过)');
                 break;
             case 2:
                 // 广告播放完成后关闭
-                log('广告播放完成，用户可以获得奖励');
+                message = '用户看完完整广告，可获得奖励';
+                hasWatchedCompletely = true;
+                log('广告播放完成，用户可以获得奖励 - 关闭类型: 2 (播放完成)');
                 this.giveUserReward();
                 break;
             case 3:
                 // 点击广告后关闭
-                log('用户点击广告后关闭');
+                message = '用户点击广告跳转，视为完成观看';
+                hasWatchedCompletely = true; // 点击也算完成观看
+                log('用户点击广告后关闭 - 关闭类型: 3 (点击跳转)');
+                this.giveUserReward();
                 break;
             default:
-                log('广告关闭，未知关闭类型');
+                message = `广告关闭，未知关闭类型 (${closeType})`;
+                hasWatchedCompletely = false;
+                log(`广告关闭，未知关闭类型: ${closeType}`);
                 break;
         }
+        
+        // 更新状态标签，明确显示用户是否看完广告
+        const statusText = `${message} (看完广告: ${hasWatchedCompletely ? '是' : '否'})`;
+        this.updateStatus(statusText);
+        
+        // 额外的详细日志
+        log(`广告关闭处理完成 - 类型: ${closeType}, 完成观看: ${hasWatchedCompletely}, 状态: ${statusText}`);
     }
 
     /**
