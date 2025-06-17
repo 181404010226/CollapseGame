@@ -2,7 +2,7 @@
   "ver": "1.0.27",
   "importer": "image",
   "imported": true,
-  "uuid": "ad0972d6-ff63-42ec-a096-71a7248c89e0",
+  "uuid": "6a18a859-1015-4e04-a40d-3971bbcd4dbf",
   "files": [
     ".json",
     ".png"
@@ -10,14 +10,14 @@
   "subMetas": {
     "6c48a": {
       "importer": "texture",
-      "uuid": "ad0972d6-ff63-42ec-a096-71a7248c89e0@6c48a",
+      "uuid": "6a18a859-1015-4e04-a40d-3971bbcd4dbf@6c48a",
       "displayName": "注册背景",
       "id": "6c48a",
       "name": "texture",
       "userData": {
         "wrapModeS": "clamp-to-edge",
         "wrapModeT": "clamp-to-edge",
-        "imageUuidOrDatabaseUri": "ad0972d6-ff63-42ec-a096-71a7248c89e0",
+        "imageUuidOrDatabaseUri": "6a18a859-1015-4e04-a40d-3971bbcd4dbf",
         "isUuid": true,
         "visible": false,
         "minfilter": "linear",
@@ -34,7 +34,7 @@
     },
     "f9941": {
       "importer": "sprite-frame",
-      "uuid": "ad0972d6-ff63-42ec-a096-71a7248c89e0@f9941",
+      "uuid": "6a18a859-1015-4e04-a40d-3971bbcd4dbf@f9941",
       "displayName": "注册背景",
       "id": "f9941",
       "name": "spriteFrame",
@@ -113,7 +113,7 @@
           ]
         },
         "isUuid": true,
-        "imageUuidOrDatabaseUri": "ad0972d6-ff63-42ec-a096-71a7248c89e0@6c48a",
+        "imageUuidOrDatabaseUri": "6a18a859-1015-4e04-a40d-3971bbcd4dbf@6c48a",
         "atlasUuid": "",
         "trimType": "auto"
       },
@@ -129,6 +129,6 @@
     "type": "sprite-frame",
     "hasAlpha": true,
     "fixAlphaTransparencyArtifacts": false,
-    "redirect": "ad0972d6-ff63-42ec-a096-71a7248c89e0@6c48a"
+    "redirect": "6a18a859-1015-4e04-a40d-3971bbcd4dbf@6c48a"
   }
 }

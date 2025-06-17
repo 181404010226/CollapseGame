@@ -1,0 +1,13 @@
+{
+  "ver": "4.0.24",
+  "importer": "typescript",
+  "imported": true,
+  "uuid": "a5e7e0b1-5c1c-4a3b-8b5d-8e0d5f5c6d7e",
+  "files": [],
+  "subMetas": {},
+  "userData": {
+    "moduleId": "project:///assets/scripts/PopupHider.js",
+    "importerSettings": 7,
+    "simulateGlobals": []
+  }
+}

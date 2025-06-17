@@ -2,7 +2,7 @@
   "ver": "1.0.27",
   "importer": "image",
   "imported": true,
-  "uuid": "0623df54-0182-4712-bf20-60230ed734e1",
+  "uuid": "1fd33d40-6b2e-431a-a5d2-7093c4eee7ec",
   "files": [
     ".json",
     ".png"
@@ -10,14 +10,14 @@
   "subMetas": {
     "6c48a": {
       "importer": "texture",
-      "uuid": "0623df54-0182-4712-bf20-60230ed734e1@6c48a",
+      "uuid": "1fd33d40-6b2e-431a-a5d2-7093c4eee7ec@6c48a",
       "displayName": "转盘",
       "id": "6c48a",
       "name": "texture",
       "userData": {
         "wrapModeS": "clamp-to-edge",
         "wrapModeT": "clamp-to-edge",
-        "imageUuidOrDatabaseUri": "0623df54-0182-4712-bf20-60230ed734e1",
+        "imageUuidOrDatabaseUri": "1fd33d40-6b2e-431a-a5d2-7093c4eee7ec",
         "isUuid": true,
         "visible": false,
         "minfilter": "linear",
@@ -34,7 +34,7 @@
     },
     "f9941": {
       "importer": "sprite-frame",
-      "uuid": "0623df54-0182-4712-bf20-60230ed734e1@f9941",
+      "uuid": "1fd33d40-6b2e-431a-a5d2-7093c4eee7ec@f9941",
       "displayName": "转盘",
       "id": "f9941",
       "name": "spriteFrame",
@@ -113,7 +113,7 @@
           ]
         },
         "isUuid": true,
-        "imageUuidOrDatabaseUri": "0623df54-0182-4712-bf20-60230ed734e1@6c48a",
+        "imageUuidOrDatabaseUri": "1fd33d40-6b2e-431a-a5d2-7093c4eee7ec@6c48a",
         "atlasUuid": "",
         "trimType": "auto"
       },
@@ -129,6 +129,6 @@
     "type": "sprite-frame",
     "hasAlpha": true,
     "fixAlphaTransparencyArtifacts": false,
-    "redirect": "0623df54-0182-4712-bf20-60230ed734e1@6c48a"
+    "redirect": "1fd33d40-6b2e-431a-a5d2-7093c4eee7ec@6c48a"
   }
 }
