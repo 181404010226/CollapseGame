@@ -5868,10 +5868,6 @@
       {
         "__uuid__": "5940d6c0-9b83-48e1-9478-44ecd97fb784",
         "__expectedType__": "cc.Prefab"
-      },
-      {
-        "__uuid__": "5940d6c0-9b83-48e1-9478-44ecd97fb784",
-        "__expectedType__": "cc.Prefab"
       }
     ],
     "itemProbabilities": [
@@ -5884,10 +5880,16 @@
       10,
       10,
       10,
-      10,
-      0,
+      1000,
       0
     ],
+    "lightEffectSkeletonData": {
+      "__uuid__": "368a8b6d-0c8a-46da-a679-8d07320319f0",
+      "__expectedType__": "sp.SkeletonData"
+    },
+    "collectionBoxPosition": {
+      "__id__": 72
+    },
     "_id": "dfXTGxiRRGULOEx9dWvufn"
   },
   {

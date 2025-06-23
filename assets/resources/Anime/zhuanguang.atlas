@@ -1,0 +1,13 @@
+
+zhuanguang.png
+size: 256,256
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+g
+  rotate: false
+  xy: 2, 3
+  size: 130, 129
+  orig: 174, 174
+  offset: 21, 22
+  index: -1

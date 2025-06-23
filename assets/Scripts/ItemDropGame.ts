@@ -1,4 +1,4 @@
-import { _decorator, Component, Node, Prefab, RigidBody2D, PhysicsSystem2D, Contact2DType, Collider2D, Vec3, input, Input, EventTouch, instantiate, Vec2, director, Camera, Canvas, UITransform } from 'cc';
+import { _decorator, Component, Node, Prefab, RigidBody2D, PhysicsSystem2D, Contact2DType, Collider2D, Vec3, input, Input, EventTouch, instantiate, Vec2, director, Camera, Canvas, UITransform, tween, sp } from 'cc';
 import { ItemData } from './ItemData';
 const { ccclass, property } = _decorator;
 
@@ -14,6 +14,14 @@ export class ItemDropGame extends Component {
     @property([Number])
     public itemProbabilities: number[] = [];
     
+    // 转光动画资源
+    @property(sp.SkeletonData)
+    public lightEffectSkeletonData: sp.SkeletonData = null!;
+    
+    // 收纳盒位置
+    @property(Node)
+    public collectionBoxPosition: Node = null!;
+    
     // 游戏配置常量 - 根据游戏体验优化
     private readonly GRAVITY = -300;
     private readonly PREVIEW_SCALE = 0.8;
@@ -21,9 +29,18 @@ export class ItemDropGame extends Component {
     private readonly DROP_DELAY = 0.15;
     private readonly SYNTHESIS_DELAY = 0.1;
     
+    // 最高等级合成特效相关常量
+    private readonly EFFECT_DURATION = 2.0;           // 特效总时长
+    private readonly SCALE_UP_DURATION = 0.8;         // 放大阶段时长
+    private readonly SCALE_DOWN_DURATION = 0.8;       // 缩小阶段时长
+    private readonly CENTER_HOLD_DURATION = 0.4;      // 在中心停留时长
+    private readonly MAX_SCALE = 1.5;                 // 最大缩放比例
+    private readonly FINAL_SCALE = 0.6;               // 最终缩放比例
+    
     private normalizedProbabilities: number[] = [];
     private currentPreviewItem: Node | null = null;
     private isDropping: boolean = false;
+    private isPlayingMaxLevelEffect: boolean = false;  // 是否正在播放最高等级特效
     private gameArea: Node = null!;
     private mainCamera: Camera | null = null;
     
@@ -112,7 +129,7 @@ export class ItemDropGame extends Component {
      * 屏幕触摸事件
      */
     private onScreenTouch(event: EventTouch): void {
-        if (this.isDropping || !this.currentPreviewItem || !this.mainCamera) {
+        if (this.isDropping || !this.currentPreviewItem || !this.mainCamera || this.isPlayingMaxLevelEffect) {
             return;
         }
         
@@ -387,6 +404,9 @@ export class ItemDropGame extends Component {
      * 合成物品
      */
     private synthesizeItems(item1: Node, item2: Node, newLevel: number): void {
+        // 检查是否为最高等级合成
+        const isMaxLevel = newLevel >= this.itemPrefabs.length - 1;
+        
         // 计算合成位置
         const pos1 = item1.getWorldPosition();
         const pos2 = item2.getWorldPosition();
@@ -402,7 +422,11 @@ export class ItemDropGame extends Component {
             if (item2?.isValid) item2.destroy();
             
             this.scheduleOnce(() => {
-                this.createSynthesizedItem(newLevel, synthesisPos);
+                if (isMaxLevel) {
+                    this.createMaxLevelSynthesisEffect(newLevel, synthesisPos);
+                } else {
+                    this.createSynthesizedItem(newLevel, synthesisPos);
+                }
             }, 0.05);
         }, this.SYNTHESIS_DELAY);
     }
@@ -444,6 +468,217 @@ export class ItemDropGame extends Component {
         this.scheduleOnce(() => {
             this.enablePhysicsForItem(newItem);
         }, 0.1);
+    }
+    
+    /**
+     * 创建最高等级合成特效
+     */
+    private createMaxLevelSynthesisEffect(level: number, synthesisWorldPos: Vec3): void {
+        // 设置特效状态
+        this.isPlayingMaxLevelEffect = true;
+        
+        // 禁用所有物理碰撞
+        this.disableAllPhysics();
+        
+        // 创建最高等级物品
+        const prefab = this.itemPrefabs[level];
+        if (!prefab) {
+            this.isPlayingMaxLevelEffect = false;
+            return;
+        }
+        
+        // 转换到本地坐标
+        const gameAreaTransform = this.gameArea.getComponent(UITransform);
+        let localSynthesisPos: Vec3;
+        if (gameAreaTransform) {
+            localSynthesisPos = gameAreaTransform.convertToNodeSpaceAR(synthesisWorldPos);
+        } else {
+            localSynthesisPos = synthesisWorldPos;
+        }
+        
+        // 创建容器节点来包含光效和物品
+        const effectContainer = this.createEffectContainer(level, localSynthesisPos);
+        
+        // 执行缩放和移动动画（对容器进行动画）
+        this.playMaxLevelAnimation(effectContainer, localSynthesisPos);
+    }
+    
+    /**
+     * 创建包含光效和物品的容器节点
+     */
+    private createEffectContainer(level: number, position: Vec3): Node {
+        // 创建容器节点
+        const container = new Node('EffectContainer');
+        container.setPosition(position);
+        this.gameArea.addChild(container);
+        
+        // 1. 先添加光效节点（作为背景层）
+        if (this.lightEffectSkeletonData) {
+            const lightEffectNode = new Node('LightEffect');
+            const skeleton = lightEffectNode.addComponent(sp.Skeleton);
+            skeleton.skeletonData = this.lightEffectSkeletonData;
+            skeleton.loop = true;
+            
+            // 设置光效位置（容器中心）
+            lightEffectNode.setPosition(Vec3.ZERO);
+            
+            // 添加到容器
+            container.addChild(lightEffectNode);
+            
+            // 播放转光动画
+            skeleton.setAnimation(0, 'animation', true);
+        }
+        
+        // 2. 再添加物品节点（作为前景层）
+        const prefab = this.itemPrefabs[level];
+        if (prefab) {
+            const maxLevelItem = instantiate(prefab);
+            
+            // 设置物品位置（容器中心）
+            maxLevelItem.setPosition(Vec3.ZERO);
+            
+            // 设置物品数据
+            this.setupItemData(maxLevelItem);
+            
+            // 禁用物理组件，防止下坠和碰撞
+            this.disablePhysicsForItem(maxLevelItem);
+            
+            // 添加到容器（会自动在光效上方）
+            container.addChild(maxLevelItem);
+        }
+        
+        return container;
+    }
+    
+    /**
+     * 播放最高等级动画
+     */
+    private playMaxLevelAnimation(item: Node, startPos: Vec3): void {
+        // 获取屏幕中心位置
+        const screenCenter = this.getScreenCenterPosition();
+        
+        // 获取收纳盒位置
+        const collectionPos = this.getCollectionBoxPosition();
+        
+        // 第一阶段：放大并移动到屏幕中心
+        tween(item)
+            .parallel(
+                tween().to(this.SCALE_UP_DURATION, { 
+                    scale: new Vec3(this.MAX_SCALE, this.MAX_SCALE, 1) 
+                }, { easing: 'quadOut' }),
+                tween().to(this.SCALE_UP_DURATION, { 
+                    position: screenCenter 
+                }, { easing: 'quadOut' })
+            )
+            .delay(this.CENTER_HOLD_DURATION)  // 在中心停留
+            .parallel(
+                tween().to(this.SCALE_DOWN_DURATION, { 
+                    scale: new Vec3(this.FINAL_SCALE, this.FINAL_SCALE, 1) 
+                }, { easing: 'quadIn' }),
+                tween().to(this.SCALE_DOWN_DURATION, { 
+                    position: collectionPos 
+                }, { easing: 'quadIn' })
+            )
+            .call(() => {
+                this.onMaxLevelAnimationComplete(item);
+            })
+            .start();
+    }
+    
+    /**
+     * 获取屏幕中心位置（相对于gameArea的本地坐标）
+     */
+    private getScreenCenterPosition(): Vec3 {
+        if (!this.mainCamera) return Vec3.ZERO;
+        
+        // 获取屏幕中心的世界坐标
+        const screenSize = this.mainCamera.node.getComponent(UITransform);
+        if (!screenSize) return Vec3.ZERO;
+        
+        const worldCenter = new Vec3(0, 0, 0);
+        
+        // 转换到gameArea的本地坐标
+        const gameAreaTransform = this.gameArea.getComponent(UITransform);
+        if (gameAreaTransform) {
+            return gameAreaTransform.convertToNodeSpaceAR(worldCenter);
+        }
+        
+        return worldCenter;
+    }
+    
+    /**
+     * 获取收纳盒位置（相对于gameArea的本地坐标）
+     */
+    private getCollectionBoxPosition(): Vec3 {
+        if (!this.collectionBoxPosition) {
+            console.warn('ItemDropGame: 收纳盒位置未设置，使用默认位置');
+            return new Vec3(0, -200, 0);
+        }
+        
+        const collectionWorldPos = this.collectionBoxPosition.getWorldPosition();
+        
+        // 转换到gameArea的本地坐标
+        const gameAreaTransform = this.gameArea.getComponent(UITransform);
+        if (gameAreaTransform) {
+            return gameAreaTransform.convertToNodeSpaceAR(collectionWorldPos);
+        }
+        
+        return collectionWorldPos;
+    }
+    
+    /**
+     * 最高等级动画完成回调
+     */
+    private onMaxLevelAnimationComplete(container: Node): void {
+        // 移除容器（光效和物品都会一起销毁）
+        if (container?.isValid) {
+            container.destroy();
+        }
+        
+        // 延迟恢复游戏状态
+        this.scheduleOnce(() => {
+            this.resumeGameAfterMaxLevelEffect();
+        }, 0.3);
+    }
+    
+    /**
+     * 最高等级特效结束后恢复游戏状态
+     */
+    private resumeGameAfterMaxLevelEffect(): void {
+        // 恢复特效状态
+        this.isPlayingMaxLevelEffect = false;
+        
+        // 重新启用所有物理碰撞
+        this.enableAllPhysics();
+        
+        // 如果没有预览物品，生成新的
+        if (!this.currentPreviewItem) {
+            this.generateNextPreviewItem();
+        }
+    }
+    
+    /**
+     * 禁用所有物理碰撞
+     */
+    private disableAllPhysics(): void {
+        // 禁用所有已投放物品的物理组件
+        this.gameArea.children.forEach(child => {
+            if (child.name.includes('DropItem_')) {
+                this.disablePhysicsForItem(child);
+            }
+        });
+    }
+    
+    /**
+     * 启用所有物理碰撞
+     */
+    private enableAllPhysics(): void {
+        // 重新启用所有已投放物品的物理组件
+        this.gameArea.children.forEach(child => {
+            if (child.name.includes('DropItem_')) {
+                this.enablePhysicsForItem(child);
+            }
+        });
     }
     
     /**
