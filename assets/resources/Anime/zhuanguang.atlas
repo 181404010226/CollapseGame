@@ -1,13 +1,13 @@
 
 zhuanguang.png
-size: 256,256
+size: 247,247
 format: RGBA8888
 filter: Linear,Linear
 repeat: none
 g
   rotate: false
-  xy: 2, 3
-  size: 130, 129
-  orig: 174, 174
-  offset: 21, 22
+  xy: 2, 2
+  size: 243, 243
+  orig: 347, 347
+  offset: 52, 51
   index: -1

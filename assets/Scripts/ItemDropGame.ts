@@ -1,4 +1,4 @@
-import { _decorator, Component, Node, Prefab, RigidBody2D, PhysicsSystem2D, Contact2DType, Collider2D, Vec3, input, Input, EventTouch, instantiate, Vec2, director, Camera, Canvas, UITransform, tween, sp } from 'cc';
+import { _decorator, Component, Node, Prefab, RigidBody2D, PhysicsSystem2D, Contact2DType, Collider2D, Vec3, input, Input, EventTouch, instantiate, Vec2, director, Camera, Canvas, UITransform, tween, sp, UIOpacity } from 'cc';
 import { ItemData } from './ItemData';
 const { ccclass, property } = _decorator;
 
@@ -17,6 +17,10 @@ export class ItemDropGame extends Component {
     // 转光动画资源
     @property(sp.SkeletonData)
     public lightEffectSkeletonData: sp.SkeletonData = null!;
+    
+    // 特效播放速度
+    @property({ type: Number, displayName: "特效播放速度", tooltip: "控制转光特效的播放速度，数值越大播放越快" })
+    public effectPlaySpeed: number = 0.2;
     
     // 收纳盒位置
     @property(Node)
@@ -525,8 +529,13 @@ export class ItemDropGame extends Component {
             // 添加到容器
             container.addChild(lightEffectNode);
             
-            // 播放转光动画
+            // 播放转光动画并设置播放速度
             skeleton.setAnimation(0, 'animation', true);
+            skeleton.timeScale = this.effectPlaySpeed;
+            
+            // 设置特效透明度
+            const opacity = lightEffectNode.addComponent(UIOpacity);
+            opacity.opacity = 128;
         }
         
         // 2. 再添加物品节点（作为前景层）
