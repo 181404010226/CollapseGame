@@ -14,9 +14,9 @@ export class ItemDropGame extends Component {
     @property([Number])
     public itemProbabilities: number[] = [];
     
-    // 转光动画资源
-    @property(sp.SkeletonData)
-    public lightEffectSkeletonData: sp.SkeletonData = null!;
+    // 特效容器预制体（包含光效和物品结构）
+    @property(Prefab)
+    public effectContainerPrefab: Prefab = null!
     
     // 特效播放速度
     @property({ type: Number, displayName: "特效播放速度", tooltip: "控制转光特效的播放速度，数值越大播放越快" })
@@ -27,7 +27,7 @@ export class ItemDropGame extends Component {
     public collectionBoxPosition: Node = null!;
     
     // 游戏配置常量 - 根据游戏体验优化
-    private readonly GRAVITY = -300;
+    private readonly GRAVITY = -1000;
     private readonly PREVIEW_SCALE = 0.8;
     private readonly SPAWN_HEIGHT = 20;
     private readonly DROP_DELAY = 0.15;
@@ -45,8 +45,16 @@ export class ItemDropGame extends Component {
     private currentPreviewItem: Node | null = null;
     private isDropping: boolean = false;
     private isPlayingMaxLevelEffect: boolean = false;  // 是否正在播放最高等级特效
+    private synthesizingItems: Set<Node> = new Set();  // 正在合成的物品集合
     private gameArea: Node = null!;
     private mainCamera: Camera | null = null;
+    private isFollowing: boolean = false;              // 是否正在跟随触摸
+    private followingStartPos: Vec3 = Vec3.ZERO;       // 跟随开始时的位置
+    
+    // 对象池相关
+    private effectContainerPool: Node[] = [];          // 特效容器对象池
+    private readonly MAX_POOL_SIZE = 3;                // 对象池最大容量
+    private currentEffectContainer: Node | null = null; // 当前使用的特效容器
     
     protected onLoad(): void {
         this.validateInputs();
@@ -55,10 +63,117 @@ export class ItemDropGame extends Component {
         this.setupInputHandling();
         this.gameArea = this.node;
         this.mainCamera = this.findCamera();
+        this.initializeEffectPool();
     }
     
     protected start(): void {
         this.generateNextPreviewItem();
+    }
+    
+    /**
+     * 初始化特效容器对象池
+     */
+    private initializeEffectPool(): void {
+        if (!this.effectContainerPrefab) {
+            console.warn('ItemDropGame: 特效容器预制体未设置，将跳过对象池初始化');
+            return;
+        }
+        
+        // 预创建一个特效容器放入池中
+        const container = instantiate(this.effectContainerPrefab);
+        container.active = false; // 初始状态为隐藏
+        this.gameArea.addChild(container);
+        this.effectContainerPool.push(container);
+        
+        console.log('🏊‍♂️ 特效容器对象池初始化完成，预创建1个容器');
+    }
+    
+    /**
+     * 从对象池获取特效容器
+     */
+    private getEffectContainerFromPool(): Node | null {
+        if (!this.effectContainerPrefab) {
+            console.error('ItemDropGame: 特效容器预制体未设置！');
+            return null;
+        }
+        
+        // 从池中获取可用容器
+        let container = this.effectContainerPool.pop();
+        
+        // 如果池中没有可用容器且还未达到最大数量，创建新的
+        if (!container) {
+            container = instantiate(this.effectContainerPrefab);
+            this.gameArea.addChild(container);
+            console.log('🆕 创建新的特效容器');
+        } else {
+            console.log('♻️ 复用池中的特效容器');
+        }
+        
+        return container;
+    }
+    
+    /**
+     * 将特效容器回收到对象池
+     */
+    private recycleEffectContainer(container: Node): void {
+        if (!container || !container.isValid) {
+            return;
+        }
+        
+        // 重置容器状态
+        this.resetEffectContainer(container);
+        
+        // 如果池未满，回收到池中
+        if (this.effectContainerPool.length < this.MAX_POOL_SIZE) {
+            container.active = false;
+            this.effectContainerPool.push(container);
+            console.log('♻️ 特效容器已回收到对象池');
+        } else {
+            // 池已满，直接销毁
+            container.destroy();
+            console.log('🗑️ 对象池已满，销毁多余的特效容器');
+        }
+        
+        // 清空当前使用的容器引用
+        if (this.currentEffectContainer === container) {
+            this.currentEffectContainer = null;
+        }
+    }
+    
+    /**
+     * 重置特效容器状态
+     */
+    private resetEffectContainer(container: Node): void {
+        // 停止所有动画
+        tween(container).stop();
+        
+        // 重置位置、缩放、透明度等
+        container.setPosition(Vec3.ZERO);
+        container.setScale(Vec3.ONE);
+        
+        // 重置骨骼动画
+        const skeleton = container.getComponentInChildren(sp.Skeleton);
+        if (skeleton) {
+            skeleton.setAnimation(0, 'animation', true);
+            skeleton.timeScale = this.effectPlaySpeed;
+        }
+        
+        // 重置透明度
+        const opacity = container.getComponent(UIOpacity);
+        if (opacity) {
+            opacity.opacity = 255;
+        }
+        
+        // 找到物品节点并重置其状态
+        const maxLevelItem = container.children.find(child => {
+            return child.name.includes('财神') || child.getComponent(ItemData);
+        });
+        
+        if (maxLevelItem) {
+            // 禁用物理组件
+            this.disablePhysicsForItem(maxLevelItem);
+            maxLevelItem.setScale(Vec3.ONE);
+        }
     }
     
     /**
@@ -108,7 +223,10 @@ export class ItemDropGame extends Component {
      * 设置输入处理
      */
     private setupInputHandling(): void {
-        input.on(Input.EventType.TOUCH_START, this.onScreenTouch, this);
+        input.on(Input.EventType.TOUCH_START, this.onScreenTouchStart, this);
+        input.on(Input.EventType.TOUCH_MOVE, this.onScreenTouchMove, this);
+        input.on(Input.EventType.TOUCH_END, this.onScreenTouchEnd, this);
+        input.on(Input.EventType.TOUCH_CANCEL, this.onScreenTouchEnd, this); // 处理触摸取消
     }
     
     /**
@@ -130,10 +248,10 @@ export class ItemDropGame extends Component {
     }
     
     /**
-     * 屏幕触摸事件
+     * 屏幕触摸开始事件
      */
-    private onScreenTouch(event: EventTouch): void {
-        if (this.isDropping || !this.currentPreviewItem || !this.mainCamera || this.isPlayingMaxLevelEffect) {
+    private onScreenTouchStart(event: EventTouch): void {
+        if (this.isDropping || this.isFollowing || !this.currentPreviewItem || !this.mainCamera || this.isPlayingMaxLevelEffect) {
             return;
         }
         
@@ -145,7 +263,44 @@ export class ItemDropGame extends Component {
             return;
         }
         
-        this.dropItemAtPosition(worldPos.x);
+        // 开始跟随模式
+        this.startFollowing(worldPos);
+    }
+
+    /**
+     * 屏幕触摸移动事件
+     */
+    private onScreenTouchMove(event: EventTouch): void {
+        if (!this.isFollowing || !this.currentPreviewItem || !this.mainCamera || this.isPlayingMaxLevelEffect) {
+            return;
+        }
+        
+        const touchPos = event.getLocation();
+        const worldPos = this.mainCamera.screenToWorld(new Vec3(touchPos.x, touchPos.y, 0));
+        
+        // 更新预览物品位置
+        this.updateFollowingPosition(worldPos);
+    }
+
+    /**
+     * 屏幕触摸结束事件
+     */
+    private onScreenTouchEnd(event: EventTouch): void {
+        if (!this.isFollowing || !this.currentPreviewItem || !this.mainCamera) {
+            return;
+        }
+        
+        const touchPos = event.getLocation();
+        const worldPos = this.mainCamera.screenToWorld(new Vec3(touchPos.x, touchPos.y, 0));
+        
+        // 检查释放位置是否在有效区域内
+        if (this.isValidTouchPosition(worldPos)) {
+            // 在有效区域内，执行投放
+            this.dropItemAtCurrentPosition();
+        } else {
+            // 在有效区域外，取消投放，恢复原位置
+            this.cancelFollowing();
+        }
     }
     
     /**
@@ -178,6 +333,104 @@ export class ItemDropGame extends Component {
         const isBelowDivider = worldPos.y <= dividerWorldPos.y;
         
         return isWithinXRange && isBelowDivider;
+    }
+
+    /**
+     * 开始跟随模式
+     */
+    private startFollowing(worldPos: Vec3): void {
+        if (!this.currentPreviewItem) return;
+        
+        // 记录开始跟随时的位置
+        this.followingStartPos = this.currentPreviewItem.getPosition().clone();
+        
+        // 设置跟随状态
+        this.isFollowing = true;
+        
+        // 立即更新位置到触摸点
+        this.updateFollowingPosition(worldPos);
+    }
+
+    /**
+     * 更新跟随位置
+     */
+    private updateFollowingPosition(worldPos: Vec3): void {
+        if (!this.currentPreviewItem) return;
+        
+        // 转换worldPos到gameArea的本地坐标系
+        let localX = worldPos.x;
+        const gameAreaTransform = this.gameArea.getComponent(UITransform);
+        if (gameAreaTransform) {
+            const worldPosVec = new Vec3(worldPos.x, worldPos.y, 0);
+            const localPos = gameAreaTransform.convertToNodeSpaceAR(worldPosVec);
+            localX = localPos.x;
+        }
+        
+        // 限制X坐标在dividerLine范围内
+        const clampedX = this.clampXPositionToDividerLine(localX);
+        
+        // 更新预览物品位置（保持原有的Y坐标）
+        const currentPos = this.currentPreviewItem.getPosition();
+        this.currentPreviewItem.setPosition(new Vec3(clampedX, currentPos.y, currentPos.z));
+    }
+
+    /**
+     * 将X坐标限制在dividerLine范围内
+     */
+    private clampXPositionToDividerLine(localX: number): number {
+        if (!this.dividerLine) return localX;
+        
+        // 获取dividerLine的世界坐标位置
+        const dividerWorldPos = this.dividerLine.getWorldPosition();
+        
+        // 获取dividerLine的UITransform组件以获取宽度
+        const dividerTransform = this.dividerLine.getComponent(UITransform);
+        if (!dividerTransform) return localX;
+        
+        // 转换dividerLine边界到gameArea本地坐标
+        const gameAreaTransform = this.gameArea.getComponent(UITransform);
+        if (!gameAreaTransform) return localX;
+        
+        const halfWidth = dividerTransform.width / 2;
+        const leftWorldBound = new Vec3(dividerWorldPos.x - halfWidth, dividerWorldPos.y, 0);
+        const rightWorldBound = new Vec3(dividerWorldPos.x + halfWidth, dividerWorldPos.y, 0);
+        
+        const leftLocalBound = gameAreaTransform.convertToNodeSpaceAR(leftWorldBound).x;
+        const rightLocalBound = gameAreaTransform.convertToNodeSpaceAR(rightWorldBound).x;
+        
+        // 限制在边界内
+        return Math.max(leftLocalBound, Math.min(rightLocalBound, localX));
+    }
+
+    /**
+     * 在当前位置投放物品
+     */
+    private dropItemAtCurrentPosition(): void {
+        if (!this.currentPreviewItem) return;
+        
+        // 结束跟随状态
+        this.isFollowing = false;
+        
+        // 设置为投放状态
+        this.isDropping = true;
+        
+        // 延迟投放，让位置有视觉效果
+        this.scheduleOnce(() => {
+            this.releaseCurrentItem();
+        }, this.DROP_DELAY);
+    }
+
+    /**
+     * 取消跟随，恢复原位置
+     */
+    private cancelFollowing(): void {
+        if (!this.currentPreviewItem) return;
+        
+        // 恢复到原始位置
+        this.currentPreviewItem.setPosition(this.followingStartPos);
+        
+        // 结束跟随状态
+        this.isFollowing = false;
     }
     
     /**
@@ -359,11 +612,21 @@ export class ItemDropGame extends Component {
         const selfNode = selfCollider.node;
         const otherNode = otherCollider.node;
         
+        // 检查是否已经在合成过程中
+        if (this.synthesizingItems.has(selfNode) || this.synthesizingItems.has(otherNode)) {
+            return;
+        }
+        
         const selfLevel = this.getItemLevel(selfNode);
         const otherLevel = this.getItemLevel(otherNode);
         
         // 检查是否可以合成
         if (selfLevel === otherLevel && this.canSynthesize(selfLevel)) {
+            // 标记为正在合成，防止重复触发
+            this.synthesizingItems.add(selfNode);
+            this.synthesizingItems.add(otherNode);
+            
+            console.log(`🔄 开始合成: ${selfLevel} + ${otherLevel} = ${selfLevel + 1}`);
             this.synthesizeItems(selfNode, otherNode, selfLevel + 1);
         }
     }
@@ -416,23 +679,31 @@ export class ItemDropGame extends Component {
         const pos2 = item2.getWorldPosition();
         const synthesisPos = new Vec3((pos1.x + pos2.x) / 2, (pos1.y + pos2.y) / 2, pos1.z);
         
-        // 禁用物理组件防止重复碰撞
-        this.disablePhysicsForItem(item1);
-        this.disablePhysicsForItem(item2);
-        
-        // 延迟销毁和创建
+        // ⚠️ 重要：延迟物理操作，避免在碰撞回调中直接操作RigidBody
+        // 这样可以避免 "Can not active RigidBody in contract listener" 警告
         this.scheduleOnce(() => {
-            if (item1?.isValid) item1.destroy();
-            if (item2?.isValid) item2.destroy();
+            // 在下一帧禁用物理组件防止重复碰撞
+            this.disablePhysicsForItem(item1);
+            this.disablePhysicsForItem(item2);
             
+            // 延迟销毁和创建
             this.scheduleOnce(() => {
-                if (isMaxLevel) {
-                    this.createMaxLevelSynthesisEffect(newLevel, synthesisPos);
-                } else {
-                    this.createSynthesizedItem(newLevel, synthesisPos);
-                }
-            }, 0.05);
-        }, this.SYNTHESIS_DELAY);
+                // 清理合成标记
+                this.synthesizingItems.delete(item1);
+                this.synthesizingItems.delete(item2);
+                
+                if (item1?.isValid) item1.destroy();
+                if (item2?.isValid) item2.destroy();
+                
+                this.scheduleOnce(() => {
+                    if (isMaxLevel) {
+                        this.createMaxLevelSynthesisEffect(newLevel, synthesisPos);
+                    } else {
+                        this.createSynthesizedItem(newLevel, synthesisPos);
+                    }
+                }, 0.05);
+            }, this.SYNTHESIS_DELAY);
+        }, 0); // 延迟到下一帧执行
     }
     
     /**
@@ -478,18 +749,13 @@ export class ItemDropGame extends Component {
      * 创建最高等级合成特效
      */
     private createMaxLevelSynthesisEffect(level: number, synthesisWorldPos: Vec3): void {
+        console.log('🎬 开始最高等级手动动画');
+        
         // 设置特效状态
         this.isPlayingMaxLevelEffect = true;
         
         // 禁用所有物理碰撞
         this.disableAllPhysics();
-        
-        // 创建最高等级物品
-        const prefab = this.itemPrefabs[level];
-        if (!prefab) {
-            this.isPlayingMaxLevelEffect = false;
-            return;
-        }
         
         // 转换到本地坐标
         const gameAreaTransform = this.gameArea.getComponent(UITransform);
@@ -500,63 +766,52 @@ export class ItemDropGame extends Component {
             localSynthesisPos = synthesisWorldPos;
         }
         
-        // 创建容器节点来包含光效和物品
-        const effectContainer = this.createEffectContainer(level, localSynthesisPos);
+        // 从对象池获取特效容器
+        const effectContainer = this.getEffectContainerFromPool();
+        if (!effectContainer) {
+            console.error('ItemDropGame: 无法获取特效容器！');
+            this.isPlayingMaxLevelEffect = false;
+            this.enableAllPhysics();
+            return;
+        }
         
-        // 执行缩放和移动动画（对容器进行动画）
+        // 保存当前使用的容器引用
+        this.currentEffectContainer = effectContainer;
+        
+        // 设置容器状态
+        this.setupEffectContainer(effectContainer, level, localSynthesisPos);
+        
+        // 执行缩放和移动动画
         this.playMaxLevelAnimation(effectContainer, localSynthesisPos);
     }
     
     /**
-     * 创建包含光效和物品的容器节点
+     * 设置特效容器
      */
-    private createEffectContainer(level: number, position: Vec3): Node {
-        // 创建容器节点
-        const container = new Node('EffectContainer');
+    private setupEffectContainer(container: Node, level: number, position: Vec3): void {
+        // 激活容器
+        container.active = true;
         container.setPosition(position);
-        this.gameArea.addChild(container);
         
-        // 1. 先添加光效节点（作为背景层）
-        if (this.lightEffectSkeletonData) {
-            const lightEffectNode = new Node('LightEffect');
-            const skeleton = lightEffectNode.addComponent(sp.Skeleton);
-            skeleton.skeletonData = this.lightEffectSkeletonData;
-            skeleton.loop = true;
-            
-            // 设置光效位置（容器中心）
-            lightEffectNode.setPosition(Vec3.ZERO);
-            
-            // 添加到容器
-            container.addChild(lightEffectNode);
-            
-            // 播放转光动画并设置播放速度
+        // 查找并设置骨骼动画播放速度
+        const skeleton = container.getComponentInChildren(sp.Skeleton);
+        if (skeleton) {
             skeleton.setAnimation(0, 'animation', true);
             skeleton.timeScale = this.effectPlaySpeed;
-            
-            // 设置特效透明度
-            const opacity = lightEffectNode.addComponent(UIOpacity);
-            opacity.opacity = 128;
         }
         
-        // 2. 再添加物品节点（作为前景层）
-        const prefab = this.itemPrefabs[level];
-        if (prefab) {
-            const maxLevelItem = instantiate(prefab);
-            
-            // 设置物品位置（容器中心）
-            maxLevelItem.setPosition(Vec3.ZERO);
-            
+        // 查找容器中的物品节点并设置数据
+        const maxLevelItem = container.children.find(child => {
+            return child.name.includes('财神') || child.getComponent(ItemData);
+        });
+        
+        if (maxLevelItem) {
             // 设置物品数据
             this.setupItemData(maxLevelItem);
             
             // 禁用物理组件，防止下坠和碰撞
             this.disablePhysicsForItem(maxLevelItem);
-            
-            // 添加到容器（会自动在光效上方）
-            container.addChild(maxLevelItem);
         }
-        
-        return container;
     }
     
     /**
@@ -639,10 +894,10 @@ export class ItemDropGame extends Component {
      * 最高等级动画完成回调
      */
     private onMaxLevelAnimationComplete(container: Node): void {
-        // 移除容器（光效和物品都会一起销毁）
-        if (container?.isValid) {
-            container.destroy();
-        }
+        console.log('🏁 最高等级动画完成，开始回收容器');
+        
+        // 回收容器到对象池而不是销毁
+        this.recycleEffectContainer(container);
         
         // 延迟恢复游戏状态
         this.scheduleOnce(() => {
@@ -708,7 +963,26 @@ export class ItemDropGame extends Component {
     }
     
     protected onDestroy(): void {
-        input.off(Input.EventType.TOUCH_START, this.onScreenTouch, this);
+        // 移除事件监听器
+        input.off(Input.EventType.TOUCH_START, this.onScreenTouchStart, this);
+        input.off(Input.EventType.TOUCH_MOVE, this.onScreenTouchMove, this);
+        input.off(Input.EventType.TOUCH_END, this.onScreenTouchEnd, this);
+        input.off(Input.EventType.TOUCH_CANCEL, this.onScreenTouchEnd, this);
         PhysicsSystem2D.instance.off(Contact2DType.BEGIN_CONTACT, this.onItemCollision, this);
+        
+        // 清理对象池
+        this.effectContainerPool.forEach(container => {
+            if (container && container.isValid) {
+                container.destroy();
+            }
+        });
+        this.effectContainerPool = [];
+        
+        // 清理状态
+        this.synthesizingItems.clear();
+        this.currentPreviewItem = null;
+        this.currentEffectContainer = null;
+        
+        console.log("🧹 ItemDropGame 已清理所有状态、监听器和对象池");
     }
 } 
