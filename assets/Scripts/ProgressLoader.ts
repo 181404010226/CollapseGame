@@ -1,7 +1,7 @@
 import { _decorator, Component, log, warn } from 'cc';
 import { GameProgressService } from '../API/GameProgressService';
 import { ApiConfig } from '../API/ApiConfig';
-import { GameUIUpdater } from './GameUIUpdater';
+import { RewardDisplayController } from './RewardDisplayController';
 
 const { ccclass, property } = _decorator;
 
@@ -104,7 +104,7 @@ export class ProgressLoader extends Component {
         // 更新当前场景的UI显示
         try {
             log('游戏进度加载后开始更新当前场景UI...');
-            GameUIUpdater.updateCurrentSceneUI();
+            RewardDisplayController.updateCurrentSceneDisplay();
             log('游戏进度加载后场景UI更新完成');
         } catch (uiError) {
             warn('游戏进度加载后UI更新失败:', uiError);

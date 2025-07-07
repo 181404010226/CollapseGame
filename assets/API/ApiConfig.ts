@@ -129,6 +129,7 @@ export class ApiConfig {
         
         // 游戏相关
         QUERY_GAME_PROGRESS: '/game/queryGameProgress',
+        SAVE_GAME_PROGRESS: '/game/saveGameProgress',
         
         // 其他端点...
     };

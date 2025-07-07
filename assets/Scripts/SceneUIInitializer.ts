@@ -1,5 +1,5 @@
 import { _decorator, Component, log } from 'cc';
-import { GameUIUpdater } from './GameUIUpdater';
+import { RewardDisplayController } from './RewardDisplayController';
 
 const { ccclass, property } = _decorator;
 
@@ -43,7 +43,7 @@ export class SceneUIInitializer extends Component {
             
             // 延迟更新以确保场景完全加载
             setTimeout(() => {
-                GameUIUpdater.updateCurrentSceneUI();
+                RewardDisplayController.updateCurrentSceneDisplay();
                 log('SceneUIInitializer: 场景UI更新完成');
             }, this.updateDelay);
             
@@ -57,6 +57,6 @@ export class SceneUIInitializer extends Component {
      */
     public manualUpdateUI(): void {
         log('SceneUIInitializer: 手动更新UI');
-        GameUIUpdater.updateCurrentSceneUI();
+        RewardDisplayController.updateCurrentSceneDisplay();
     }
 } 

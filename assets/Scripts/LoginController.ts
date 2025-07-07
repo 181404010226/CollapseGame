@@ -4,7 +4,7 @@ import { WeChatLogin, WeChatLoginResult } from '../API/WeChatLogin';
 import { PangleAd } from '../API/PangleAdManager';
 import { ApiConfig, UserData } from '../API/ApiConfig';
 import { LoginService, LoginResponse } from '../API/LoginService';
-import { GameUIUpdater } from './GameUIUpdater';
+import { RewardDisplayController } from './RewardDisplayController';
 const { ccclass, property } = _decorator;
 
 @ccclass('LoginController')
@@ -387,7 +387,7 @@ export class LoginController extends Component {
                 // 更新当前场景的UI显示（延迟更新以确保场景完全加载）
                 try {
                     console.log('游客登录后开始更新当前场景UI...');
-                    GameUIUpdater.updateCurrentSceneUIDelayed(300);
+                    RewardDisplayController.updateCurrentSceneDisplayDelayed(300);
                     console.log('游客登录后场景UI延迟更新已启动');
                 } catch (uiError) {
                     console.error('游客登录后UI更新失败:', uiError);
@@ -485,7 +485,7 @@ export class LoginController extends Component {
             // 2. 更新当前场景的UI显示（延迟更新以确保场景完全加载）
             try {
                 console.log('开始更新当前场景UI...');
-                GameUIUpdater.updateCurrentSceneUIDelayed(300);
+                RewardDisplayController.updateCurrentSceneDisplayDelayed(300);
                 console.log('场景UI延迟更新已启动');
             } catch (uiError) {
                 console.error('UI更新失败:', uiError);
