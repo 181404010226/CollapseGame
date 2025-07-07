@@ -1,5 +1,6 @@
 import { _decorator, Component, Node, Prefab, RigidBody2D, PhysicsSystem2D, Contact2DType, Collider2D, Vec3, input, Input, EventTouch, instantiate, Vec2, director, Camera, Canvas, UITransform, tween, sp, UIOpacity } from 'cc';
 import { ItemData } from './ItemData';
+import { EffectContainerPool } from './EffectContainerPool';
 const { ccclass, property } = _decorator;
 
 @ccclass('ItemDropGame')
@@ -26,6 +27,33 @@ export class ItemDropGame extends Component {
     @property(Node)
     public collectionBoxPosition: Node = null!;
     
+    // 红包收纳节点
+    @property(Node)
+    public redPacketNode: Node = null!;
+    
+    // 金币收纳节点
+    @property(Node)
+    public goldCoinNode: Node = null!;
+    
+    // "+1"节点（合成财神时显示）
+    @property(Node)
+    public plusOneNode: Node = null!;
+    
+    // 红包预制体
+    @property(Prefab)
+    public redPacketPrefab: Prefab = null!;
+    
+    // 金币预制体
+    @property(Prefab)
+    public goldCoinPrefab: Prefab = null!;
+    
+    // 红包和金币生成配置
+    @property({ type: [Number], displayName: "每级红包数量", tooltip: "每个等级合成时生成的红包数量" })
+    public redPacketCountPerLevel: number[] = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7];
+    
+    @property({ type: [Number], displayName: "每级金币数量", tooltip: "每个等级合成时生成的金币数量" })
+    public goldCoinCountPerLevel: number[] = [2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 12, 12, 14];
+    
     // 游戏配置常量 - 根据游戏体验优化
     private readonly GRAVITY = -1000;
     private readonly PREVIEW_SCALE = 0.8;
@@ -40,6 +68,16 @@ export class ItemDropGame extends Component {
     private readonly CENTER_HOLD_DURATION = 0.4;      // 在中心停留时长
     private readonly MAX_SCALE = 1.5;                 // 最大缩放比例
     private readonly FINAL_SCALE = 0.6;               // 最终缩放比例
+    
+    // 红包和金币相关常量
+    private readonly REWARD_SPAWN_RADIUS = 100;        // 奖励生成半径
+    private readonly REWARD_MOVE_DURATION = 2.0;      // 奖励移动时长
+    private readonly REWARD_SCALE = 0.6;              // 奖励缩放比例
+    private readonly REWARD_SPAWN_DELAY = 0.1;        // 奖励生成间隔
+    
+    // "+1"节点动画相关常量
+    private readonly PLUS_ONE_JUMP_HEIGHT = 50;       // "+1"跳跃高度
+    private readonly PLUS_ONE_JUMP_DURATION = 0.6;    // "+1"跳跃总时长
     
     private normalizedProbabilities: number[] = [];
     private currentPreviewItem: Node | null = null;
@@ -583,10 +621,14 @@ export class ItemDropGame extends Component {
                 if (item1?.isValid) item1.destroy();
                 if (item2?.isValid) item2.destroy();
                 
-                this.scheduleOnce(() => {
+                this.scheduleOnce(() => {                
                     if (isMaxLevel) {
+                        // 显示"+1"效果（只在合成财神时显示）
+                        this.showPlusOneEffect();
                         this.createMaxLevelSynthesisEffect(newLevel, synthesisPos);
                     } else {
+                        // 生成红包和金币奖励
+                        this.generateRewards(newLevel, synthesisPos);
                         this.createSynthesizedItem(newLevel, synthesisPos);
                     }
                 }, 0.05);
@@ -670,13 +712,20 @@ export class ItemDropGame extends Component {
      * 创建特效容器节点
      */
     private createEffectContainer(level: number, position: Vec3): Node {
-        if (!this.effectContainerPrefab) {
-            console.error('ItemDropGame: 特效容器预制体未设置！');
+        // 使用对象池获取特效容器
+        const effectPool = EffectContainerPool.getInstance();
+        if (!effectPool) {
+            console.error('ItemDropGame: 特效容器对象池未初始化！');
             return null!;
         }
         
-        // 直接实例化容器预制体
-        const container = instantiate(this.effectContainerPrefab);
+        const container = effectPool.getItem();
+        if (!container) {
+            console.error('ItemDropGame: 无法从对象池获取特效容器！');
+            return null!;
+        }
+        
+        // 设置位置并添加到游戏区域
         container.setPosition(position);
         this.gameArea.addChild(container);
         
@@ -784,9 +833,18 @@ export class ItemDropGame extends Component {
      * 最高等级动画完成回调
      */
     private onMaxLevelAnimationComplete(container: Node): void {
-        // 移除容器（光效和物品都会一起销毁）
+        // 从游戏区域移除容器
         if (container?.isValid) {
-            container.destroy();
+            container.removeFromParent();
+            
+            // 将容器回收到对象池
+            const effectPool = EffectContainerPool.getInstance();
+            if (effectPool) {
+                effectPool.returnItem(container);
+            } else {
+                // 如果对象池不存在，直接销毁
+                container.destroy();
+            }
         }
         
         // 延迟恢复游戏状态
@@ -850,6 +908,152 @@ export class ItemDropGame extends Component {
      */
     public getCurrentProbabilities(): number[] {
         return [...this.normalizedProbabilities];
+    }
+    
+    /**
+     * 生成红包和金币奖励
+     */
+    private generateRewards(synthesisLevel: number, synthesisWorldPos: Vec3): void {
+        // 获取奖励数量
+        const redPacketCount = this.getRedPacketCount(synthesisLevel);
+        const goldCoinCount = this.getGoldCoinCount(synthesisLevel);
+        
+        // 生成红包
+        this.generateRedPackets(redPacketCount, synthesisWorldPos);
+        
+        // 生成金币
+        this.generateGoldCoins(goldCoinCount, synthesisWorldPos);
+    }
+    
+    /**
+     * 获取红包数量
+     */
+    private getRedPacketCount(level: number): number {
+        if (level < 0 || level >= this.redPacketCountPerLevel.length) {
+            return 1; // 默认值
+        }
+        return this.redPacketCountPerLevel[level];
+    }
+    
+    /**
+     * 获取金币数量
+     */
+    private getGoldCoinCount(level: number): number {
+        if (level < 0 || level >= this.goldCoinCountPerLevel.length) {
+            return 2; // 默认值
+        }
+        return this.goldCoinCountPerLevel[level];
+    }
+    
+    /**
+     * 生成红包
+     */
+    private generateRedPackets(count: number, centerWorldPos: Vec3): void {
+        if (!this.redPacketPrefab || !this.redPacketNode) {
+            console.warn('ItemDropGame: 红包预制体或红包节点未设置');
+            return;
+        }
+        
+        for (let i = 0; i < count; i++) {
+            this.createRewardItem(this.redPacketPrefab, centerWorldPos, this.redPacketNode);
+        }
+    }
+    
+    /**
+     * 生成金币
+     */
+    private generateGoldCoins(count: number, centerWorldPos: Vec3): void {
+        if (!this.goldCoinPrefab || !this.goldCoinNode) {
+            console.warn('ItemDropGame: 金币预制体或金币节点未设置');
+            return;
+        }
+        
+        for (let i = 0; i < count; i++) {
+            this.createRewardItem(this.goldCoinPrefab, centerWorldPos, this.goldCoinNode);
+        }
+    }
+    
+    /**
+     * 创建奖励物品
+     */
+    private createRewardItem(prefab: Prefab, centerWorldPos: Vec3, targetNode: Node): void {
+        const reward = instantiate(prefab);
+        this.gameArea.addChild(reward);
+        
+        const gameAreaTransform = this.gameArea.getComponent(UITransform);
+        // 先将中心点转换到 gameArea 的本地坐标
+        let localCenter: Vec3;
+        if (gameAreaTransform) {
+            localCenter = gameAreaTransform.convertToNodeSpaceAR(centerWorldPos);
+        } else {
+            localCenter = centerWorldPos.clone();
+        }
+
+        // 随机生成起始位置（在中心周围 REWARD_SPAWN_RADIUS 内一次性炸开）
+        const angle = Math.random() * Math.PI * 2;
+        const distance = Math.random() * this.REWARD_SPAWN_RADIUS;
+        const offsetX = Math.cos(angle) * distance;
+        const offsetY = Math.sin(angle) * distance;
+
+        const startPos = new Vec3(localCenter.x + offsetX, localCenter.y + offsetY, localCenter.z);
+        // 打印日志以验证生成坐标
+        console.log(`🎆 Reward spawn pos: ${startPos.x.toFixed(2)}, ${startPos.y.toFixed(2)}`);
+        
+        reward.setPosition(startPos);
+        reward.setScale(new Vec3(this.REWARD_SCALE, this.REWARD_SCALE, 1));
+        
+        // 获取目标位置（转换到本地坐标）
+        const targetWorldPos = targetNode.getWorldPosition();
+        let targetPos: Vec3;
+        if (gameAreaTransform) {
+            targetPos = gameAreaTransform.convertToNodeSpaceAR(targetWorldPos);
+        } else {
+            targetPos = targetWorldPos;
+        }
+        
+        // 移动到目标位置
+        tween(reward)
+            .to(this.REWARD_MOVE_DURATION, { position: targetPos }, { easing: 'quadInOut' })
+            .call(() => {
+                // 到达目标位置后销毁
+                if (reward?.isValid) {
+                    reward.destroy();
+                }
+                
+                // 这里可以添加收集奖励的逻辑，比如更新分数等
+                console.log(`💰 收集奖励: ${reward.name}`);
+            })
+            .start();
+    }
+    
+    /**
+     * 显示"+1"效果
+     */
+    private showPlusOneEffect(): void {
+        if (!this.plusOneNode) {
+            console.warn('ItemDropGame: "+1"节点未设置');
+            return;
+        }
+        
+        // 记录原始位置
+        const originalPos = this.plusOneNode.getPosition().clone();
+        
+        // 显示节点
+        this.plusOneNode.active = true;
+        
+        // 向上跳跃然后返回的动画
+        tween(this.plusOneNode)
+            .to(this.PLUS_ONE_JUMP_DURATION * 0.5, { 
+                position: new Vec3(originalPos.x, originalPos.y + this.PLUS_ONE_JUMP_HEIGHT, originalPos.z) 
+            }, { easing: 'quadOut' })
+            .to(this.PLUS_ONE_JUMP_DURATION * 0.5, { 
+                position: originalPos 
+            }, { easing: 'quadIn' })
+            .call(() => {
+                // 动画完成后隐藏节点
+                this.plusOneNode.active = false;
+            })
+            .start();
     }
     
     protected onDestroy(): void {
