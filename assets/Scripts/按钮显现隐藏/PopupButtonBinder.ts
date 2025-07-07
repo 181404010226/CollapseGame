@@ -119,37 +119,14 @@ export class PopupButtonBinder extends Component {
         console.log('[PopupButtonBinder] 弹窗初始位置', this.currentPopup.position);
         this.currentPopup.position = new Vec3(0, 0, 0);
 
-        if (this.useAnimation) {
-            const uiOpacity = this.currentPopup.getComponent(UIOpacity) || this.currentPopup.addComponent(UIOpacity);
-            uiOpacity.opacity = 0;
-            
-            // 记录原始位置，确保动画不会改变最终位置
-            const originalPosition = new Vec3(
-                this.currentPopup.position.x,
-                this.currentPopup.position.y,
-                this.currentPopup.position.z
-            );
-            console.log('[PopupButtonBinder] 动画前位置:', originalPosition);
-            
-            // 设置初始缩放
-            this.currentPopup.scale = new Vec3(0.8, 0.8, 1);
-            
-            // 延迟到下一帧播放动画
-            this.scheduleOnce(() => {
-                // 缩放动画
-                tween(this.currentPopup)
-                    .to(this.animationDuration, { scale: new Vec3(1, 1, 1) }, { easing: 'backOut' })
-                    .call(() => { })
-                    .start();
-
-                // 透明度动画
-                tween(uiOpacity)
-                    .to(this.animationDuration, { opacity: 255 })
-                    .call(() => {
-                    })
-                    .start();
-            }, 0);
-        } else if (callback) {
+        // 直接显示弹窗，不播放入场动画
+        const uiOpacity = this.currentPopup.getComponent(UIOpacity) || this.currentPopup.addComponent(UIOpacity);
+        uiOpacity.opacity = 255;  // 设置为完全不透明
+        this.currentPopup.scale = new Vec3(1, 1, 1);  // 设置为正常大小
+        
+        console.log('[PopupButtonBinder] 弹窗直接显示，无动画效果');
+        
+        if (callback) {
             callback();
         }
         // 调用后再次打印世界坐标

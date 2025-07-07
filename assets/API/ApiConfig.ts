@@ -21,6 +21,16 @@ export interface WeChatConfig {
     scope: string;
 }
 
+export interface UserData {
+    openid: string | null;
+    wechatNickname: string | null;
+    wechatAvatar: string | null;
+    isRealName: boolean;
+    access_token: string;
+    expire_in: number;
+    client_id: string | null;
+}
+
 /**
  * API配置类
  */
@@ -56,6 +66,13 @@ export class ApiConfig {
     // 当前使用的环境
     public static readonly CURRENT_ENV: string = 'production';
 
+    // 开发模式配置
+    public static readonly DEV_MODE = {
+        ENABLE_MOCK_LOGIN: false,  // 启用模拟登录（网络失败时）
+        ENABLE_DEBUG_LOGS: true,  // 启用详细调试日志
+        SKIP_REAL_API: false     // 完全跳过真实API调用（仅用于UI测试）
+    };
+
     // 应用配置
     public static readonly APP_CONFIG: AppConfig = {
         packageName: 'com.schanyin.tgcf',
@@ -67,6 +84,29 @@ export class ApiConfig {
     public static readonly WECHAT_CONFIG: WeChatConfig = {
         appId: 'wx7870c770371205e4',
         scope: 'snsapi_userinfo'
+    };
+
+    // === 新增：当前登录用户数据 ===
+    public static USER_DATA: UserData | null = null;
+
+    /**
+     * 保存（覆盖）当前用户数据
+     */
+    public static setUserData(data: UserData): void {
+        this.USER_DATA = data;
+    }
+
+    /**
+     * 获取当前用户数据
+     */
+    public static getUserData(): UserData | null {
+        return this.USER_DATA;
+    }
+
+    // 发布渠道配置
+    public static readonly RELEASE_CHANNEL = {
+        DEFAULT: 'juliang',  // 默认发布渠道
+        AVAILABLE: ['juliang', 'huawei', 'xiaomi', 'oppo', 'vivo'] // 可用的发布渠道
     };
 
     // API端点配置
@@ -81,11 +121,34 @@ export class ApiConfig {
         // 设备相关
         DEVICE_REPORT: '/device/report',
         
+        // 风控相关
+        RISK_DETECTION: '/safe/riskDetection',
+        
         // 账户相关
         GET_ACCOUNT_INFO: '/home/getAccountInfo',
         
+        // 游戏相关
+        QUERY_GAME_PROGRESS: '/game/queryGameProgress',
+        
         // 其他端点...
     };
+
+    // === 新增：游戏进度数据 ===
+    public static GAME_PROGRESS: any | null = null;
+
+    /**
+     * 保存（覆盖）游戏进度数据
+     */
+    public static setGameProgress(data: any): void {
+        this.GAME_PROGRESS = data;
+    }
+
+    /**
+     * 获取当前游戏进度数据
+     */
+    public static getGameProgress(): any | null {
+        return this.GAME_PROGRESS;
+    }
 
     // HTTP状态码
     public static readonly HTTP_STATUS = {
@@ -172,6 +235,13 @@ export class ApiConfig {
     }
 
     /**
+     * 获取发布渠道
+     */
+    public static getReleaseChannel(): string {
+        return this.RELEASE_CHANNEL.DEFAULT;
+    }
+
+    /**
      * 检查响应是否成功
      * @param code 响应状态码
      */
@@ -189,6 +259,7 @@ export class ApiConfig {
         console.log(`API地址: ${env.baseUrl}`);
         console.log(`超时时间: ${env.timeout}ms`);
         console.log(`应用包名: ${this.getPackageName()}`);
+        console.log(`发布渠道: ${this.getReleaseChannel()}`);
         console.log(`应用版本: ${this.getVersionName()} (${this.getCurrentVersion()})`);
         console.log(`微信AppID: ${this.getWeChatAppId()}`);
         console.log('==================');

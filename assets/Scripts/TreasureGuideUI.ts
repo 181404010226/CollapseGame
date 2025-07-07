@@ -106,7 +106,8 @@ export class TreasureGuideUI extends Component {
             if (imageNode) {
                 const sprite = imageNode.getComponent(Sprite);
                 if (sprite) {
-                    resources.load(`${treasureInfo.spritePath}/spriteFrame`, SpriteFrame, (err, spriteFrame) => {
+                    // 加载对应宝物的 SpriteFrame（资源需放置于 resources 目录下）
+                    resources.load(`${treasureInfo.spritePath}`, SpriteFrame, (err, spriteFrame) => {
                         if (!err && sprite.isValid) sprite.spriteFrame = spriteFrame;
                     });
                 }

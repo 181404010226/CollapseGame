@@ -45,67 +45,114 @@ interface LoginApiResponse {
 @ccclass('WeChatLogin')
 export class WeChatLogin extends Component {
 
-    private static instance: WeChatLogin = null;
     private loginCallback: ((result: WeChatLoginResult) => void) | null = null;
+    private isInitialized: boolean = false;
     
     onLoad() {
-        // 设置为单例
-        if (WeChatLogin.instance) {
-            this.destroy();
-            return;
-        }
-        WeChatLogin.instance = this;
-        
-        // 监听来自原生端的微信登录结果
-        this.setupNativeListeners();
-        
-        log('=== 微信登录管理器初始化完成 ===');
+        log('=== 微信登录管理器初始化 ===');
         log(`使用微信AppID: ${ApiConfig.getWeChatAppId()}`);
         log(`API地址: ${ApiConfig.getBaseUrl()}`);
         log(`登录端点: ${ApiConfig.ENDPOINTS.WECHAT_LOGIN}`);
     }
 
+    start() {
+        // 延迟初始化原生监听器，确保场景完全加载
+        this.initializeNativeListeners();
+    }
+
     onDestroy() {
-        if (WeChatLogin.instance === this) {
-            WeChatLogin.instance = null;
-        }
+        log('=== 微信登录管理器销毁 ===');
         this.removeNativeListeners();
+        this.loginCallback = null;
     }
 
     /**
-     * 获取单例实例
+     * 初始化原生监听器
      */
-    public static getInstance(): WeChatLogin | null {
-        return WeChatLogin.instance;
-    }
+    private initializeNativeListeners(): void {
+        if (this.isInitialized) {
+            log('原生监听器已初始化，跳过重复初始化');
+            return;
+        }
 
-    /**
-     * 设置原生监听器
-     * 修复：使用全局消息监听机制
-     */
-    private setupNativeListeners(): void {
         try {
-            log('=== 开始设置原生监听器 ===');
+            log('=== 开始初始化原生监听器 ===');
             
-            // 检查是否在原生环境
+            // 检查原生环境
             if (typeof native !== 'undefined' && native.bridge) {
-                log('原生环境检测成功，设置消息监听器');
-                
-                // 注册全局消息监听器
-                native.bridge.onNative = (command: string, data: string) => {
-                    log(`=== 收到原生消息 ===`);
-                    log(`命令: ${command}`);
-                    log(`数据: ${data}`);
-                    
-                    this.handleNativeMessage(command, data);
-                };
-                
-                log('原生监听器设置完成');
+                log('原生环境检测成功，设置监听器');
+                this.setupNativeBridgeListener();
+            } else if (typeof jsb !== 'undefined' && (jsb as any).bridge) {
+                log('JSB环境检测成功，设置监听器');
+                this.setupJSBBridgeListener();
             } else {
                 warn('非原生环境，跳过监听器设置');
             }
+            
+            this.isInitialized = true;
+            log('原生监听器初始化完成');
+            
         } catch (error) {
-            warn('设置原生监听器失败:', error);
+            warn('初始化原生监听器失败:', error);
+        }
+    }
+
+    /**
+     * 设置 native.bridge 监听器
+     */
+    private setupNativeBridgeListener(): void {
+        if (!native.bridge) return;
+
+        // 保存原有的处理器
+        const originalHandler = native.bridge.onNative;
+        
+        // 设置新的处理器
+        native.bridge.onNative = (command: string, data: string) => {
+            // 先调用原有处理器
+            if (originalHandler && typeof originalHandler === 'function') {
+                originalHandler.call(native.bridge, command, data);
+            }
+            
+            // 处理微信登录相关消息
+            this.handleNativeMessage(command, data);
+        };
+        
+        log('✅ native.bridge 监听器设置完成');
+    }
+
+    /**
+     * 设置 jsb.bridge 监听器
+     */
+    private setupJSBBridgeListener(): void {
+        try {
+            const jsbBridge: any = (jsb as any).bridge;
+            if (!jsbBridge) return;
+
+            // 方式1: 通过 setCallback 设置
+            if (jsbBridge.setCallback) {
+                const callbackObj = {
+                    onScript: (command: string, data: string) => {
+                        this.handleNativeMessage(command, data);
+                    }
+                };
+                jsbBridge.setCallback(callbackObj);
+                log('✅ jsb.bridge.setCallback 监听器设置完成');
+            }
+            
+            // 方式2: 直接设置 onNative
+            if (jsbBridge.onNative) {
+                const originalHandler = jsbBridge.onNative;
+                jsbBridge.onNative = (command: string, data: string) => {
+                    if (originalHandler && typeof originalHandler === 'function') {
+                        originalHandler.call(jsbBridge, command, data);
+                    }
+                    this.handleNativeMessage(command, data);
+                };
+                log('✅ jsb.bridge.onNative 监听器设置完成');
+            }
+            
+        } catch (error) {
+            warn('设置 jsb.bridge 监听器失败:', error);
         }
     }
 
@@ -113,7 +160,7 @@ export class WeChatLogin extends Component {
      * 处理原生消息
      */
     private handleNativeMessage(command: string, data: string): void {
-        log(`=== 处理原生消息: ${command} ===`);
+        log(`=== 收到原生消息: ${command} ===`);
         
         switch (command) {
             case 'wechatLoginResult':
@@ -125,7 +172,7 @@ export class WeChatLogin extends Component {
                 this.handleWeChatLoginError(data);
                 break;
             default:
-                log(`未知原生命令: ${command}`);
+                // 不是微信登录相关的消息，忽略
                 break;
         }
     }
@@ -136,8 +183,9 @@ export class WeChatLogin extends Component {
     private removeNativeListeners(): void {
         try {
             if (typeof native !== 'undefined' && native.bridge) {
-                native.bridge.onNative = null;
-                log('原生监听器已移除');
+                // 注意：这里不能简单设置为null，因为可能有其他组件也在使用
+                // 在实际项目中，应该使用更复杂的消息路由机制
+                log('保留原生监听器，避免影响其他组件');
             }
         } catch (error) {
             warn('移除原生监听器失败:', error);
@@ -145,46 +193,39 @@ export class WeChatLogin extends Component {
     }
 
     /**
-     * 处理微信授权结果（从原生端返回的code）
+     * 处理微信授权结果
      */
     private async handleWeChatAuthResult(data: string): Promise<void> {
         try {
-            log('=== 开始处理微信授权结果 ===');
+            log('=== 处理微信授权结果 ===');
             log('原始数据:', data);
             
             const authResult: WeChatAuthResult = JSON.parse(data);
             log('解析后的授权结果:', authResult);
             
             if (authResult.success && authResult.code) {
-                log('>>> 微信授权成功，准备获取access_token <<<');
+                log('>>> 微信授权成功，获取用户信息 <<<');
                 log('授权码:', authResult.code);
                 
-                // 使用code调用后端API获取用户信息
+                // 调用后端API获取用户信息
                 await this.loginWithCode(authResult.code);
             } else {
-                // 授权失败
                 log('>>> 微信授权失败 <<<');
                 warn('授权失败原因:', authResult.error || '未知错误');
                 
-                if (this.loginCallback) {
-                    this.loginCallback({
-                        success: false,
-                        error: authResult.error || '微信授权失败'
-                    });
-                    this.loginCallback = null;
-                }
+                this.callLoginCallback({
+                    success: false,
+                    error: authResult.error || '微信授权失败'
+                });
             }
         } catch (error) {
             warn('=== 解析微信授权结果失败 ===', error);
             warn('原始数据:', data);
             
-            if (this.loginCallback) {
-                this.loginCallback({
-                    success: false,
-                    error: '解析授权结果失败: ' + error.message
-                });
-                this.loginCallback = null;
-            }
+            this.callLoginCallback({
+                success: false,
+                error: '解析授权结果失败: ' + error.message
+            });
         }
     }
 
@@ -193,130 +234,109 @@ export class WeChatLogin extends Component {
      */
     private async loginWithCode(code: string): Promise<void> {
         try {
-            log('=== 开始调用后端API获取access_token ===');
+            log('=== 开始调用后端API ===');
             log(`授权码: ${code}`);
             
-            // 使用ApiConfig构建API URL，添加code和packageName参数
+            // 构建API URL - 添加必需的 releaseChannel 参数
             const packageName = ApiConfig.getPackageName();
+            const releaseChannel = ApiConfig.getReleaseChannel();
             const apiUrl = ApiConfig.getFullUrl(ApiConfig.ENDPOINTS.WECHAT_LOGIN) + 
-                `?code=${encodeURIComponent(code)}&packageName=${encodeURIComponent(packageName)}`;
+                `?code=${encodeURIComponent(code)}&packageName=${encodeURIComponent(packageName)}&releaseChannel=${encodeURIComponent(releaseChannel)}`;
+            
             log(`请求URL: ${apiUrl}`);
-            log(`包名参数: ${packageName}`);
-            
-            const requestHeaders = {
-                'Content-Type': 'application/json',
-                'User-Agent': 'CocosCreator-WeChat-Login',
-                'X-Requested-With': 'XMLHttpRequest'
-            };
-            log('请求头:', requestHeaders);
-            
-            const requestTime = Date.now();
-            log(`>>> 发起HTTP请求获取access_token <<<`);
-            log(`请求时间戳: ${requestTime}`);
+            log(`包名: ${packageName}`);
+            log(`发布渠道: ${releaseChannel}`);
             
             // 发起HTTP请求
             const response = await fetch(apiUrl, {
                 method: 'GET',
-                headers: requestHeaders,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'CocosCreator-WeChat-Login',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
             });
-
-            const responseTime = Date.now();
-            const requestDuration = responseTime - requestTime;
-            log(`>>> HTTP请求完成 <<<`);
-            log(`响应时间戳: ${responseTime}`);
-            log(`请求耗时: ${requestDuration}ms`);
-            log(`响应状态: ${response.status} ${response.statusText}`);
-            log('响应头:', response.headers);
+            
+            log(`HTTP响应状态: ${response.status} ${response.statusText}`);
 
             if (response.ok) {
-                log('>>> HTTP请求成功，解析响应数据 <<<');
-                
                 const responseText = await response.text();
-                log('原始响应内容:', responseText);
+                log('响应内容:', responseText);
                 
                 const apiResult: LoginApiResponse = JSON.parse(responseText);
-                log('=== 后端API返回成功 ===');
-                log('解析后的响应数据:', apiResult);
+                log('解析后的API结果:', apiResult);
                 
                 // 检查后端返回的状态码
                 if (apiResult.code === 200 && apiResult.data) {
+                    // 登录成功
                     const userData = apiResult.data;
                     log(`获得openid: ${userData.openid}`);
+                    log(`微信昵称: ${userData.wechatNickname}`);
+                    log(`微信头像: ${userData.wechatAvatar}`);
+                    log(`是否实名: ${userData.isRealName}`);
                     log(`获得access_token: ${userData.access_token ? '已获取' : '未获取'}`);
                     log(`token过期时间: ${userData.expire_in}秒`);
                     log(`client_id: ${userData.client_id}`);
-                    log(`微信昵称: ${userData.wechatNickname}`);
-                    log(`微信头像: ${userData.wechatAvatar}`);
                     
-                    // 登录成功，返回结果
-                    if (this.loginCallback) {
-                        const successResult: WeChatLoginResult = {
-                            success: true,
-                            openid: userData.openid,
-                            access_token: userData.access_token,
-                            expire_in: userData.expire_in,
-                            client_id: userData.client_id,
-                            code: code
-                        };
-                                            
-                        log('=== 微信登录流程完成，返回最终结果 ===');
-                        log('最终登录结果:', successResult);
-                        
-                        this.loginCallback(successResult);
-                        this.loginCallback = null;
-                    }
+                    log('>>> 准备调用成功回调 <<<');
+                    const successResult = {
+                        success: true,
+                        openid: userData.openid,
+                        access_token: userData.access_token,
+                        expire_in: userData.expire_in,
+                        client_id: userData.client_id,
+                        code: code
+                    };
+                    log('成功结果对象:', successResult);
+                    
+                    this.callLoginCallback(successResult);
+                    log('>>> 成功回调调用完成 <<<');
                 } else {
                     // 后端返回的业务状态码不是200
                     warn(`后端业务逻辑失败: ${apiResult.code} - ${apiResult.msg}`);
-                    if (this.loginCallback) {
-                        this.loginCallback({
-                            success: false,
-                            error: `登录失败: ${apiResult.msg}`,
-                            code: code
-                        });
-                        this.loginCallback = null;
-                    }
-                }
-            } else {
-                log('>>> HTTP请求失败 <<<');
-                const errorText = await response.text();
-                warn(`后端API调用失败: ${response.status} ${response.statusText}`);
-                warn('错误响应内容:', errorText);
-                
-                let errorMessage = `登录失败: ${response.status} ${response.statusText}`;
-                if (errorText) {
-                    try {
-                        const errorObj = JSON.parse(errorText);
-                        if (errorObj.error || errorObj.message) {
-                            errorMessage += `: ${errorObj.error || errorObj.message}`;
-                        }
-                    } catch (e) {
-                        errorMessage += `: ${errorText}`;
-                    }
-                }
-                
-                if (this.loginCallback) {
-                    this.loginCallback({
+                    this.callLoginCallback({
                         success: false,
-                        error: errorMessage,
+                        error: `登录失败: ${apiResult.msg}`,
                         code: code
                     });
-                    this.loginCallback = null;
                 }
-            }
-        } catch (error) {
-            warn('=== 调用后端API失败 ===');
-            warn('错误详情:', error);
-            warn('错误堆栈:', error.stack);
-            
-            if (this.loginCallback) {
-                this.loginCallback({
+            } else {
+                // HTTP请求失败
+                const errorText = await response.text();
+                warn(`HTTP请求失败: ${response.status} ${response.statusText}`);
+                warn('错误响应:', errorText);
+                
+                this.callLoginCallback({
                     success: false,
-                    error: `网络请求失败: ${error.message}`,
+                    error: `请求失败: ${response.status} ${response.statusText}`,
                     code: code
                 });
-                this.loginCallback = null;
             }
+        } catch (error) {
+            warn('=== 调用后端API失败 ===', error);
+            
+            // 开发模式下的模拟登录
+            if (ApiConfig.DEV_MODE.ENABLE_MOCK_LOGIN) {
+                warn('=== 启用开发模式模拟登录 ===');
+                
+                setTimeout(() => {
+                    this.callLoginCallback({
+                        success: true,
+                        openid: 'mock_openid_' + Date.now(),
+                        access_token: 'mock_access_token_' + Date.now(),
+                        expire_in: 7200,
+                        client_id: 'mock_client_id',
+                        code: code
+                    });
+                }, 500);
+                return;
+            }
+            
+            this.callLoginCallback({
+                success: false,
+                error: `网络请求失败: ${error.message}`,
+                code: code
+            });
         }
     }
 
@@ -327,12 +347,35 @@ export class WeChatLogin extends Component {
         log('=== 处理微信登录错误 ===');
         warn('错误信息:', errorMsg);
         
+        this.callLoginCallback({
+            success: false,
+            error: errorMsg
+        });
+    }
+
+    /**
+     * 调用登录回调
+     */
+    private callLoginCallback(result: WeChatLoginResult): void {
+        log('=== 进入 callLoginCallback ===');
+        log('回调状态检查: loginCallback =', this.loginCallback ? '存在' : '不存在');
+        
         if (this.loginCallback) {
-            this.loginCallback({
-                success: false,
-                error: errorMsg
-            });
-            this.loginCallback = null;
+            log('=== 调用登录回调 ===');
+            log('登录结果:', result);
+            
+            const callback = this.loginCallback;
+            this.loginCallback = null; // 清空回调，避免重复调用
+            
+            log('>>> 即将执行回调函数 <<<');
+            try {
+                callback(result);
+                log('>>> 回调函数执行完成 <<<');
+            } catch (error) {
+                warn('回调函数执行异常:', error);
+            }
+        } else {
+            warn('登录回调不存在，可能已被清空或未设置');
         }
     }
 
@@ -344,7 +387,7 @@ export class WeChatLogin extends Component {
             try {
                 log('=== 开始微信登录流程 ===');
                 
-                // 检查是否已经有登录请求在处理
+                // 检查是否已有登录请求在处理
                 if (this.loginCallback) {
                     const error = new Error('已有登录请求正在处理中');
                     warn('登录请求冲突:', error.message);
@@ -356,51 +399,94 @@ export class WeChatLogin extends Component {
                 this.loginCallback = resolve;
                 log('登录回调已设置');
 
-                // 检查是否在原生环境
+                // 确保监听器已初始化
+                if (!this.isInitialized) {
+                    this.initializeNativeListeners();
+                }
+
+                // 检查原生环境
                 if (typeof native === 'undefined' || !native.bridge) {
-                    warn('>>> 非原生环境检测 <<<');
-                    // 非原生环境，返回模拟结果
+                    warn('>>> 非原生环境 <<<');
+                    
+                    // 非原生环境返回错误
                     setTimeout(() => {
-                        const mockResult: WeChatLoginResult = {
+                        this.callLoginCallback({
                             success: false,
                             error: '当前环境不支持微信登录，请在真机上测试'
-                        };
-                        
-                        log('返回模拟结果:', mockResult);
-                        
-                        if (this.loginCallback) {
-                            this.loginCallback(mockResult);
-                            this.loginCallback = null;
-                        }
-                    }, 500);
+                        });
+                    }, 100);
                     return;
                 }
 
-                log('>>> 原生环境检测成功，发送登录请求 <<<');
-                // 发送微信登录请求到原生端
+                log('>>> 发送微信登录请求到原生端 <<<');
+                // 发送登录请求到原生端
                 native.bridge.sendToNative('wechatLogin', '');
-                log('=== 微信登录请求已发送到原生端 ===');
+                log('微信登录请求已发送');
 
                 // 设置超时处理
-                const timeoutMs = ApiConfig.getTimeout() * 2; // 使用配置的超时时间的2倍
+                const timeoutMs = ApiConfig.getTimeout() * 2;
                 log(`设置超时时间: ${timeoutMs}ms`);
                 
-                setTimeout(() => {
+                const timeoutId = setTimeout(() => {
+                    log('=== 超时定时器触发 ===');
+                    log('超时检查: loginCallback =', this.loginCallback ? '存在' : '不存在');
+                    
                     if (this.loginCallback) {
                         warn('=== 微信登录超时 ===');
-                        this.loginCallback({
+                        this.callLoginCallback({
                             success: false,
                             error: `微信登录超时 (${timeoutMs}ms)`
                         });
-                        this.loginCallback = null;
+                    } else {
+                        log('登录已完成，跳过超时处理');
                     }
                 }, timeoutMs);
+                
+                log('超时定时器已设置, ID:', timeoutId);
 
             } catch (error) {
                 warn('=== 发起微信登录失败 ===', error);
                 reject(error);
             }
         });
+    }
+
+    /**
+     * 检查微信是否已安装
+     */
+    public isWeChatInstalled(): Promise<boolean> {
+        return new Promise((resolve) => {
+            log('检查微信安装状态');
+            
+            // 检查原生环境
+            if (typeof native === 'undefined' || !native.bridge) {
+                log('非原生环境，返回false');
+                resolve(false);
+                return;
+            }
+            
+            // 在实际项目中，可以发送消息到原生端检查微信安装状态
+            // 这里简化处理，返回true
+            log('原生环境，假设微信已安装');
+            resolve(true);
+        });
+    }
+
+    /**
+     * 取消当前登录请求
+     */
+    public cancelLogin(): void {
+        log('=== 取消微信登录请求 ===');
+        
+        if (this.loginCallback) {
+            this.callLoginCallback({
+                success: false,
+                error: '用户取消登录'
+            });
+            log('登录请求已取消');
+        } else {
+            log('没有进行中的登录请求');
+        }
     }
 
     /**
@@ -411,9 +497,12 @@ export class WeChatLogin extends Component {
             apiBaseUrl: ApiConfig.getBaseUrl(),
             wechatAppId: ApiConfig.getWeChatAppId(),
             wechatScope: ApiConfig.getWeChatScope(),
+            releaseChannel: ApiConfig.getReleaseChannel(),
             loginEndpoint: ApiConfig.ENDPOINTS.WECHAT_LOGIN,
             fullLoginUrl: ApiConfig.getFullUrl(ApiConfig.ENDPOINTS.WECHAT_LOGIN),
-            timeout: ApiConfig.getTimeout()
+            timeout: ApiConfig.getTimeout(),
+            packageName: ApiConfig.getPackageName(),
+            currentEnv: ApiConfig.getCurrentEnvironment().name
         };
         
         log('当前配置信息:', config);
@@ -421,40 +510,28 @@ export class WeChatLogin extends Component {
     }
 
     /**
-     * 设置API基础URL（向后兼容，但建议直接修改ApiConfig）
-     * @deprecated 建议直接修改ApiConfig.ts中的配置
+     * 测试API连通性
      */
-    public setApiBaseUrl(url: string): void {
-        warn('setApiBaseUrl方法已过时，建议直接修改ApiConfig.ts中的配置');
-        log('当前API基础URL:', ApiConfig.getBaseUrl());
-    }
-
-    /**
-     * 检查微信是否已安装
-     */
-    public isWeChatInstalled(): Promise<boolean> {
-        return new Promise((resolve) => {
-            // 在实际项目中，可以添加检查微信安装状态的原生接口
-            // 这里简化处理，总是返回true
-            log('检查微信安装状态（模拟返回true）');
-            resolve(true);
-        });
-    }
-
-    /**
-     * 取消当前登录请求
-     */
-    public cancelLogin(): void {
-        log('=== 取消微信登录请求 ===');
-        if (this.loginCallback) {
-            this.loginCallback({
-                success: false,
-                error: '用户取消登录'
+    public async testApiConnection(): Promise<boolean> {
+        try {
+            log('=== 测试API连通性 ===');
+            const testUrl = ApiConfig.getBaseUrl() + '/';
+            log(`测试URL: ${testUrl}`);
+            
+            const response = await fetch(testUrl, {
+                method: 'GET',
+                headers: {
+                    'User-Agent': 'CocosCreator-API-Test'
+                }
             });
-            this.loginCallback = null;
-            log('登录请求已取消');
-        } else {
-            log('没有进行中的登录请求');
+            
+            const isConnected = response.status < 500;
+            log(`API连通性测试结果: ${response.status} ${response.statusText} - ${isConnected ? '连通' : '不连通'}`);
+            return isConnected;
+            
+        } catch (error) {
+            warn('API连通性测试失败:', error);
+            return false;
         }
     }
 } 

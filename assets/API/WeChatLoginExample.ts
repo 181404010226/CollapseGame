@@ -129,6 +129,8 @@ export class WeChatLoginExample extends Component {
         configInfo += `环境: ${ApiConfig.getCurrentEnvironment().name}\n`;
         configInfo += `API地址: ${ApiConfig.getBaseUrl()}\n`;
         configInfo += `微信AppID: ${ApiConfig.getWeChatAppId()}\n`;
+        configInfo += `发布渠道: ${ApiConfig.getReleaseChannel()}\n`;
+        configInfo += `包名: ${ApiConfig.getPackageName()}\n`;
         configInfo += `超时时间: ${ApiConfig.getTimeout()}ms\n`;
         configInfo += `应用版本: ${ApiConfig.getVersionName()}`;
         
@@ -167,7 +169,10 @@ export class WeChatLoginExample extends Component {
             userInfo += `微信Code: ${result.code}\n`;
         }
 
+        userInfo += `\n登录配置:`;
         userInfo += `\n环境: ${ApiConfig.getCurrentEnvironment().name}`;
+        userInfo += `\n发布渠道: ${ApiConfig.getReleaseChannel()}`;
+        userInfo += `\n包名: ${ApiConfig.getPackageName()}`;
 
         this.updateUserInfo(userInfo);
     }

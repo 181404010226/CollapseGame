@@ -1,4 +1,4 @@
-import { _decorator, Component, log, warn } from 'cc';
+import { _decorator, Component, log, warn, game, director } from 'cc';
 import { native } from 'cc';
 
 const { ccclass, property } = _decorator;
@@ -55,8 +55,17 @@ export class PangleAdManager extends Component {
     }
     
     onLoad() {
-        // 确保在游戏加载时也注册回调
-        log('PangleAdManager onLoad - 开始注册回调');
+        // 已经有单例就直接销毁自己，避免重复
+        if (PangleAdManager.instance && PangleAdManager.instance !== this) {
+            this.node.destroy();
+            return;
+        }
+
+        // 首次创建：标记为常驻
+        director.addPersistRootNode(this.node);
+        PangleAdManager.instance = this;
+        
+        // 注册原生回调
         this.registerNativeCallbacks();
     }
     
@@ -76,16 +85,28 @@ export class PangleAdManager extends Component {
         
         // 方法1: 使用 native.bridge.onNative 注册回调 (Cocos Creator 3.8.6推荐)
         if (typeof native !== 'undefined' && native.bridge) {
-            native.bridge.onNative = (command: string, data: string) => {
-                try {
-                    log(`收到原生回调 (native.bridge): ${command} -> ${data}`);
-                    this.handleNativeCallback(command, data);
-                } catch (e) {
-                    console.error('处理原生回调失败:', e);
-                }
-            };
-            
-            log('✅ 原生回调已注册 (使用 native.bridge.onNative)');
+            // 如果已经包装过，则不重复包装，避免链式回调递归
+            if (!(native.bridge as any)._pangleWrapped) {
+                const previousHandler = native.bridge.onNative?.bind(native.bridge) || null;
+                native.bridge.onNative = (command: string, data: string) => {
+                    try {
+                        // 先给之前的处理器机会
+                        if (previousHandler) {
+                            previousHandler(command, data);
+                        }
+                        // 再处理本模块的逻辑
+                        log(`收到原生回调 (native.bridge): ${command} -> ${data}`);
+                        this.handleNativeCallback(command, data);
+                    } catch (e) {
+                        console.error('处理原生回调失败:', e);
+                    }
+                };
+                // 标记已包装，防止后续重复包裹导致无限链
+                (native.bridge as any)._pangleWrapped = true;
+                log('✅ 原生回调已链式注册 (native.bridge.onNative)');
+            } else {
+                log('ℹ️ native.bridge.onNative 已被链式包装，跳过重复包装');
+            }
         } else {
             log('❌ native.bridge 不可用');
         }
