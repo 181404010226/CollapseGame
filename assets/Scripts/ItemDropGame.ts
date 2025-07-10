@@ -24,6 +24,16 @@ export class ItemDropGame extends Component {
     // 特效播放速度
     @property({ type: Number, displayName: "特效播放速度", tooltip: "控制转光特效的播放速度，数值越大播放越快" })
     public effectPlaySpeed: number = 0.2;
+
+    // 测试模式开关及相关参数 -----------------------------
+    @property({ type: Boolean, displayName: "测试模式 - 长按快速生成" })
+    public testMode: boolean = false;
+
+    @property({ type: Number, displayName: "长按阈值(秒)", tooltip: "按住超过该时间判定为长按" })
+    public testLongPressThreshold: number = 0.4;
+
+    @property({ type: Number, displayName: "快速生成间隔(秒)", tooltip: "长按后每隔多少秒生成一个物品" })
+    public testSpawnInterval: number = 0.05;
     
     // 收纳盒位置
     @property(Node)
@@ -71,6 +81,12 @@ export class ItemDropGame extends Component {
     private followingStartPos: Vec3 = Vec3.ZERO;       // 跟随开始时的位置
     private progressReporter: SynthesisProgressReporter = null;
     private effectController: RewardEffectController = null;
+
+    // -------- 测试模式临时变量 --------
+    private isTestLongPress: boolean = false;          // 是否已进入长按模式
+    private lastTouchWorldPos: Vec3 = Vec3.ZERO;       // 记录最后一次触摸的世界坐标
+    private fastGenerateCallback: Function | null = null; // 快速生成的调度函数引用
+    private longPressTimerCallback: Function | null = null; // 长按判定的调度函数引用
     
     protected onLoad(): void {
         this.validateInputs();
@@ -173,6 +189,12 @@ export class ItemDropGame extends Component {
      * 屏幕触摸开始事件
      */
     private onScreenTouchStart(event: EventTouch): void {
+        // ---------- 测试模式处理 ----------
+        if (this.testMode) {
+            this.handleTestTouchStart(event);
+            return;
+        }
+        
         if (this.isDropping || this.isFollowing || !this.currentPreviewItem || !this.mainCamera || this.isPlayingMaxLevelEffect) {
             return;
         }
@@ -193,6 +215,12 @@ export class ItemDropGame extends Component {
      * 屏幕触摸移动事件
      */
     private onScreenTouchMove(event: EventTouch): void {
+        // ---------- 测试模式处理 ----------
+        if (this.testMode) {
+            this.handleTestTouchMove(event);
+            return;
+        }
+        
         if (!this.isFollowing || !this.currentPreviewItem || !this.mainCamera || this.isPlayingMaxLevelEffect) {
             return;
         }
@@ -208,6 +236,12 @@ export class ItemDropGame extends Component {
      * 屏幕触摸结束事件
      */
     private onScreenTouchEnd(event: EventTouch): void {
+        // ---------- 测试模式处理 ----------
+        if (this.testMode) {
+            this.handleTestTouchEnd();
+            return;
+        }
+        
         if (!this.isFollowing || !this.currentPreviewItem || !this.mainCamera) {
             return;
         }
@@ -911,6 +945,100 @@ export class ItemDropGame extends Component {
     }
 
     /**
+     * ----------------------------
+     * 以下为测试模式相关辅助方法
+     * ----------------------------
+     */
+    private handleTestTouchStart(event: EventTouch): void {
+        if (!this.mainCamera) return;
+        const touchPos = event.getLocation();
+        this.lastTouchWorldPos = this.mainCamera.screenToWorld(new Vec3(touchPos.x, touchPos.y, 0));
+
+        // 取消可能残留的长按计时
+        if (this.longPressTimerCallback) {
+            this.unschedule(this.longPressTimerCallback as any);
+            this.longPressTimerCallback = null;
+        }
+
+        this.isTestLongPress = false;
+
+        // 启动长按计时
+        this.longPressTimerCallback = () => {
+            this.isTestLongPress = true;
+            this.startFastGenerating();
+        };
+        this.scheduleOnce(this.longPressTimerCallback as any, this.testLongPressThreshold);
+    }
+
+    private handleTestTouchMove(event: EventTouch): void {
+        if (!this.mainCamera) return;
+        const touchPos = event.getLocation();
+        this.lastTouchWorldPos = this.mainCamera.screenToWorld(new Vec3(touchPos.x, touchPos.y, 0));
+    }
+
+    private handleTestTouchEnd(): void {
+        // 取消长按计时
+        if (this.longPressTimerCallback) {
+            this.unschedule(this.longPressTimerCallback as any);
+            this.longPressTimerCallback = null;
+        }
+
+        if (this.isTestLongPress) {
+            // 已经在长按高速生成状态，停止生成
+            this.stopFastGenerating();
+        } else {
+            // 短按：立即生成一个物品
+            this.spawnTestItemAt(this.lastTouchWorldPos);
+        }
+    }
+
+    private startFastGenerating(): void {
+        // 防止重复调度
+        if (this.fastGenerateCallback) {
+            this.unschedule(this.fastGenerateCallback as any);
+        }
+        this.fastGenerateCallback = () => {
+            this.spawnTestItemAt(this.lastTouchWorldPos);
+        };
+        this.schedule(this.fastGenerateCallback as any, this.testSpawnInterval);
+    }
+
+    private stopFastGenerating(): void {
+        if (this.fastGenerateCallback) {
+            this.unschedule(this.fastGenerateCallback as any);
+            this.fastGenerateCallback = null;
+        }
+        this.isTestLongPress = false;
+    }
+
+    /**
+     * 在指定的世界坐标快速生成一个启用物理的物品（用于测试模式）
+     */
+    private spawnTestItemAt(worldPos: Vec3): void {
+        const level = this.selectRandomItemLevel();
+        const prefab = this.itemPrefabs[level];
+        if (!prefab) return;
+
+        const item = instantiate(prefab);
+        this.gameArea.addChild(item);
+
+        // 转换到本地坐标
+        const gameAreaTransform = this.gameArea.getComponent(UITransform);
+        let localPos: Vec3;
+        if (gameAreaTransform) {
+            localPos = gameAreaTransform.convertToNodeSpaceAR(worldPos);
+        } else {
+            localPos = worldPos.clone();
+        }
+        // 稍微向上偏移，避免立即与dividerLine重叠
+        item.setPosition(new Vec3(localPos.x, localPos.y + this.SPAWN_HEIGHT, 0));
+
+        // 设置数据并启用物理
+        this.setupItemData(item);
+        this.enablePhysicsForItem(item);
+    }
+
+    /**
      * 清理事件监听器
      */
     protected onDestroy(): void {
@@ -922,5 +1050,11 @@ export class ItemDropGame extends Component {
 
         this.synthesizingItems.clear();
         this.currentPreviewItem = null;
+        // 取消测试模式调度
+        this.stopFastGenerating();
+        if (this.longPressTimerCallback) {
+            this.unschedule(this.longPressTimerCallback as any);
+            this.longPressTimerCallback = null;
+        }
     }
 } 
