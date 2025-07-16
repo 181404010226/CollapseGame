@@ -23,7 +23,7 @@
     "_active": true,
     "_components": [],
     "_prefab": {
-      "__id__": 314
+      "__id__": 313
     },
     "_lpos": {
       "__type__": "cc.Vec3",
@@ -54,7 +54,7 @@
     },
     "autoReleaseAssets": false,
     "_globals": {
-      "__id__": 315
+      "__id__": 314
     },
     "_id": "0bcad0a0-f665-4ef7-ba42-ba80850a01b9"
   },
@@ -84,9 +84,6 @@
       },
       {
         "__id__": 312
-      },
-      {
-        "__id__": 313
       }
     ],
     "_prefab": null,
@@ -1790,7 +1787,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 228.2,
+      "width": 650,
       "height": 40
     },
     "_anchorPoint": {
@@ -1854,7 +1851,7 @@
       "__uuid__": "79b454b8-4b0f-4e72-8fe2-0ff285b31309@f9941",
       "__expectedType__": "cc.SpriteFrame"
     },
-    "_type": 0,
+    "_type": 1,
     "_fillType": 0,
     "_sizeMode": 0,
     "_fillCenter": {
@@ -1944,8 +1941,8 @@
       "__id__": 45
     },
     "_mode": 0,
-    "_totalLength": 326,
-    "_progress": 0.7,
+    "_totalLength": 650,
+    "_progress": 1,
     "_reverse": false,
     "_id": "f7MFg74w5L1KCixw4JykIV"
   },
@@ -9191,20 +9188,6 @@
     "_id": "c5V1EV8IpMtrIvY1OE9t2u"
   },
   {
-    "__type__": "a4773GAEvxD8bNYuN/yjwxY",
-    "_name": "",
-    "_objFlags": 0,
-    "__editorExtras__": {},
-    "node": {
-      "__id__": 2
-    },
-    "_enabled": true,
-    "__prefab": null,
-    "autoUpdateOnStart": true,
-    "updateDelay": 200,
-    "_id": "3ePF2UNbZKe6posC95k4wt"
-  },
-  {
     "__type__": "cc.PrefabInfo",
     "root": null,
     "asset": null,
@@ -9226,28 +9209,28 @@
   {
     "__type__": "cc.SceneGlobals",
     "ambient": {
-      "__id__": 316
+      "__id__": 315
     },
     "shadows": {
-      "__id__": 317
+      "__id__": 316
     },
     "_skybox": {
-      "__id__": 318
+      "__id__": 317
     },
     "fog": {
-      "__id__": 319
+      "__id__": 318
     },
     "octree": {
-      "__id__": 320
+      "__id__": 319
     },
     "skin": {
-      "__id__": 321
+      "__id__": 320
     },
     "lightProbeInfo": {
-      "__id__": 322
+      "__id__": 321
     },
     "postSettings": {
-      "__id__": 323
+      "__id__": 322
     },
     "bakedWithStationaryMainLight": false,
     "bakedWithHighpLightmap": false

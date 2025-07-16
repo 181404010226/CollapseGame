@@ -32,6 +32,33 @@ export interface UserData {
 }
 
 /**
+ * 本地游戏进度数据结构
+ */
+export interface LocalGameProgress {
+    // 金币相关（区分合成金币和其他金币）
+    goldNumCompose: number;    // 合成获得的金币数（以客户端为准）
+    goldNumOther: number;      // 其他金币数（以服务端为准）
+    
+    // 红包相关
+    redBagNumCompose: number;  // 合成获得的红包数
+    redBagNumOther: number;    // 其他红包数（以服务端为准）
+    
+    // 其他游戏数据
+    wealthNum: number;         // 财神数
+    exp: number;               // 经验值
+    level: number;             // 等级
+    drawNum: number;           // 剩余抽奖次数
+    progress: string;          // 游戏进度
+    
+    // 合成统计
+    times: number;             // 合成次数
+    
+    // 时间戳
+    lastServerSyncTime: number;  // 上次服务器同步时间
+    lastLocalSaveTime: number;   // 上次本地保存时间
+}
+
+/**
  * API配置类
  */
 export class ApiConfig {
@@ -103,6 +130,143 @@ export class ApiConfig {
         return this.USER_DATA;
     }
 
+    // === 修改：游戏进度数据管理 ===
+    public static LOCAL_GAME_PROGRESS: LocalGameProgress | null = null;
+
+    /**
+     * 设置本地游戏进度数据
+     */
+    public static setLocalGameProgress(data: LocalGameProgress): void {
+        this.LOCAL_GAME_PROGRESS = data;
+        this.saveLocalProgressToStorage();
+    }
+
+    /**
+     * 获取本地游戏进度数据
+     */
+    public static getLocalGameProgress(): LocalGameProgress | null {
+        return this.LOCAL_GAME_PROGRESS;
+    }
+
+    /**
+     * 初始化默认游戏进度
+     */
+    public static initializeDefaultProgress(): LocalGameProgress {
+        const defaultProgress: LocalGameProgress = {
+            goldNumCompose: 0,
+            goldNumOther: 0,
+            redBagNumCompose: 0,
+            redBagNumOther: 0,
+            wealthNum: 0,
+            exp: 0,
+            level: 1,
+            drawNum: 0,
+            progress: '',
+            times: 0,
+            lastServerSyncTime: 0,
+            lastLocalSaveTime: Date.now()
+        };
+        this.setLocalGameProgress(defaultProgress);
+        return defaultProgress;
+    }
+
+    /**
+     * 从本地存储加载游戏进度
+     */
+    public static loadLocalProgressFromStorage(): LocalGameProgress | null {
+        try {
+            const stored = localStorage.getItem('game_progress');
+            if (stored) {
+                const progress = JSON.parse(stored) as LocalGameProgress;
+                this.LOCAL_GAME_PROGRESS = progress;
+                return progress;
+            }
+        } catch (error) {
+            console.warn('加载本地进度失败:', error);
+        }
+        return null;
+    }
+
+    /**
+     * 保存游戏进度到本地存储
+     */
+    public static saveLocalProgressToStorage(): void {
+        try {
+            if (this.LOCAL_GAME_PROGRESS) {
+                this.LOCAL_GAME_PROGRESS.lastLocalSaveTime = Date.now();
+                localStorage.setItem('game_progress', JSON.stringify(this.LOCAL_GAME_PROGRESS));
+            }
+        } catch (error) {
+            console.warn('保存本地进度失败:', error);
+        }
+    }
+
+    /**
+     * 更新服务器数据（从服务器响应更新）
+     */
+    public static updateServerProgress(serverData: any): void {
+        if (!this.LOCAL_GAME_PROGRESS) {
+            this.initializeDefaultProgress();
+        }
+        
+        if (this.LOCAL_GAME_PROGRESS && serverData) {
+            // 计算其他金币数量：总金币 - 合成金币
+            const serverTotalGold = serverData.goldNum || 0;
+            const serverComposeGold = serverData.goldNumCompose || 0;
+            this.LOCAL_GAME_PROGRESS.goldNumOther = Math.max(0, serverTotalGold - serverComposeGold);
+            
+            // 合成金币取本地和服务端的高值
+            this.LOCAL_GAME_PROGRESS.goldNumCompose = Math.max(
+                this.LOCAL_GAME_PROGRESS.goldNumCompose, 
+                serverComposeGold
+            );
+            
+            // 计算其他红包数量：总红包 - 合成红包
+            const serverTotalRedBag = serverData.redBagNum || 0;
+            const serverComposeRedBag = serverData.redBagNumCompose || 0;
+            this.LOCAL_GAME_PROGRESS.redBagNumOther = Math.max(0, serverTotalRedBag - serverComposeRedBag);
+            
+            // 合成红包取本地和服务端的高值
+            this.LOCAL_GAME_PROGRESS.redBagNumCompose = Math.max(
+                this.LOCAL_GAME_PROGRESS.redBagNumCompose, 
+                serverComposeRedBag
+            );
+            
+            // 更新其他数据
+            this.LOCAL_GAME_PROGRESS.wealthNum = serverData.wealthNum || 0;
+            this.LOCAL_GAME_PROGRESS.exp = serverData.exp || 0;
+            this.LOCAL_GAME_PROGRESS.level = serverData.level || 1;
+            this.LOCAL_GAME_PROGRESS.drawNum = serverData.drawNum || 0;
+            this.LOCAL_GAME_PROGRESS.progress = serverData.progress || '';
+            this.LOCAL_GAME_PROGRESS.lastServerSyncTime = Date.now();
+            
+            this.saveLocalProgressToStorage();
+        }
+    }
+
+    /**
+     * 增加合成奖励
+     */
+    public static addComposeReward(goldReward: number, redBagReward: number, wealthReward: number): void {
+        if (!this.LOCAL_GAME_PROGRESS) {
+            this.initializeDefaultProgress();
+        }
+        
+        if (this.LOCAL_GAME_PROGRESS) {
+            this.LOCAL_GAME_PROGRESS.goldNumCompose += goldReward;
+            this.LOCAL_GAME_PROGRESS.redBagNumCompose += redBagReward;
+            this.LOCAL_GAME_PROGRESS.wealthNum += wealthReward;
+            this.LOCAL_GAME_PROGRESS.times += 1;
+            
+            // 不立即保存到本地存储，由定时器统一保存
+        }
+    }
+
+    // 移除旧的游戏进度方法
+    // public static GAME_PROGRESS: any | null = null;
+    // public static setGameProgress(data: any): void
+    // public static getGameProgress(): any | null
+
     // 发布渠道配置
     public static readonly RELEASE_CHANNEL = {
         DEFAULT: 'juliang',  // 默认发布渠道
@@ -135,21 +299,21 @@ export class ApiConfig {
     };
 
     // === 新增：游戏进度数据 ===
-    public static GAME_PROGRESS: any | null = null;
+    // public static GAME_PROGRESS: any | null = null;
 
     /**
      * 保存（覆盖）游戏进度数据
      */
-    public static setGameProgress(data: any): void {
-        this.GAME_PROGRESS = data;
-    }
+    // public static setGameProgress(data: any): void {
+    //     this.GAME_PROGRESS = data;
+    // }
 
     /**
      * 获取当前游戏进度数据
      */
-    public static getGameProgress(): any | null {
-        return this.GAME_PROGRESS;
-    }
+    // public static getGameProgress(): any | null {
+    //     return this.GAME_PROGRESS;
+    // }
 
     // HTTP状态码
     public static readonly HTTP_STATUS = {

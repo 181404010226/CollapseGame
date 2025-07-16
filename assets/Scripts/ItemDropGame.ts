@@ -1,7 +1,7 @@
 import { _decorator, Component, Node, Prefab, RigidBody2D, PhysicsSystem2D, Contact2DType, Collider2D, Vec3, input, Input, EventTouch, instantiate, Vec2, director, Camera, Canvas, UITransform, tween, sp, UIOpacity } from 'cc';
 import { ItemData } from './ItemData';
 import { EffectContainerPool } from './EffectContainerPool';
-import { SynthesisProgressReporter } from './SynthesisProgressReporter';
+import { GameProgressManager } from './GameProgressManager';
 import { RewardEffectController } from './RewardEffectController';
 const { ccclass, property } = _decorator;
 
@@ -79,7 +79,7 @@ export class ItemDropGame extends Component {
     private mainCamera: Camera | null = null;
     private isFollowing: boolean = false;              // 是否正在跟随触摸
     private followingStartPos: Vec3 = Vec3.ZERO;       // 跟随开始时的位置
-    private progressReporter: SynthesisProgressReporter = null;
+    private progressManager: GameProgressManager = null;
     private effectController: RewardEffectController = null;
 
     // -------- 测试模式临时变量 --------
@@ -96,10 +96,14 @@ export class ItemDropGame extends Component {
         this.gameArea = this.node;
         this.mainCamera = this.findCamera();
         
-        // 获取或添加进度上报组件
-        this.progressReporter = this.node.getComponent(SynthesisProgressReporter);
-        if (!this.progressReporter) {
-            this.progressReporter = this.node.addComponent(SynthesisProgressReporter);
+        // 获取或添加进度管理组件
+        this.progressManager = this.node.getComponent(GameProgressManager);
+        if (!this.progressManager) {
+            // 尝试从场景中查找现有的 GameProgressManager
+            this.progressManager = director.getScene()?.getComponentInChildren(GameProgressManager);
+            if (!this.progressManager) {
+                this.progressManager = this.node.addComponent(GameProgressManager);
+            }
         }
 
         // 获取或添加奖励特效组件
@@ -627,12 +631,15 @@ export class ItemDropGame extends Component {
      * 合成物品
      */
     private synthesizeItems(item1: Node, item2: Node, newLevel: number): void {
-        // 记录本次合成的物品名称，用于服务器上报
-        const itemName = ItemDropGame.ITEM_NAMES[newLevel] || '';
-        this.progressReporter?.recordComposeItem(itemName);
-        
         // 检查是否为最高等级合成
         const isMaxLevel = newLevel >= this.itemPrefabs.length - 1;
+        
+        // 计算合成奖励（示例数值，可根据等级调整）
+        const goldReward = newLevel * 10;  // 每级合成奖励10金币
+        const redBagReward = newLevel * 2; // 每级合成奖励2红包
+        
+        // 记录合成奖励到进度管理器
+        this.progressManager?.recordComposeReward(goldReward, redBagReward, isMaxLevel);
         
         // 计算合成位置
         const pos1 = item1.getWorldPosition();

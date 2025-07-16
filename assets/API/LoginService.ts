@@ -200,6 +200,7 @@ export class LoginService extends Component {
             // 发送请求
             const response = await this.sendLoginRequest(mockRequestData);
             
+            console.log('模拟游客登录响应数据:', response);
             // 保存token信息
             this.saveTokenInfo(response.data);
             
