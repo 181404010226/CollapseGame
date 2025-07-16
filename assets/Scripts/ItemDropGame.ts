@@ -1,9 +1,28 @@
-import { _decorator, Component, Node, Prefab, RigidBody2D, PhysicsSystem2D, Contact2DType, Collider2D, Vec3, input, Input, EventTouch, instantiate, Vec2, director, Camera, Canvas, UITransform, tween, sp, UIOpacity } from 'cc';
+import { _decorator, Component, Node, Prefab, RigidBody2D, PhysicsSystem2D, Contact2DType, Collider2D, Vec3, input, Input, EventTouch, instantiate, Vec2, director, Camera, Canvas, UITransform, tween, sp, UIOpacity, log, warn } from 'cc';
 import { ItemData } from './ItemData';
 import { EffectContainerPool } from './EffectContainerPool';
 import { GameProgressManager } from './GameProgressManager';
 import { RewardEffectController } from './RewardEffectController';
 const { ccclass, property } = _decorator;
+
+/**
+ * 场景物品数据结构
+ */
+export interface SceneItemData {
+    level: number;           // 物品等级
+    position: { x: number, y: number, z: number };  // 物品位置
+    prefabIndex: number;     // 预制体索引
+    hasPhysics: boolean;     // 是否启用物理
+}
+
+/**
+ * 完整的游戏场景数据
+ */
+export interface GameSceneData {
+    items: SceneItemData[];         // 场景中的物品
+    timestamp: number;              // 保存时间戳
+    version: string;                // 数据版本
+}
 
 @ccclass('ItemDropGame')
 export class ItemDropGame extends Component {
@@ -70,6 +89,8 @@ export class ItemDropGame extends Component {
         'GOD_OF_WEALTH'  // 财神
     ];
     
+
+    
     private normalizedProbabilities: number[] = [];
     private currentPreviewItem: Node | null = null;
     private isDropping: boolean = false;
@@ -115,6 +136,11 @@ export class ItemDropGame extends Component {
     }
     
     protected start(): void {
+        // 尝试恢复场景状态
+        this.scheduleOnce(() => {
+            this.tryRestoreSceneState();
+        }, 0.1);
+        
         this.generateNextPreviewItem();
     }
     
@@ -1045,10 +1071,189 @@ export class ItemDropGame extends Component {
         this.enablePhysicsForItem(item);
     }
 
+    // ======== 场景状态保存与恢复 ========
+    
+    /**
+     * 保存当前场景状态
+     */
+    public saveSceneState(): GameSceneData {
+        const items: SceneItemData[] = [];
+        
+        // 遍历游戏区域中的所有物品
+        this.gameArea.children.forEach(child => {
+            if (child.name.includes('DropItem_') && child !== this.currentPreviewItem) {
+                const itemData = child.getComponent(ItemData);
+                if (itemData) {
+                    const position = child.getPosition();
+                    const rigidBody = child.getComponent(RigidBody2D);
+                    const level = itemData.getLevel();
+                    
+                    // 查找对应的预制体索引
+                    const prefabIndex = this.findPrefabIndexByLevel(level);
+                    
+                    if (prefabIndex >= 0) {
+                        items.push({
+                            level: level,
+                            position: { x: position.x, y: position.y, z: position.z },
+                            prefabIndex: prefabIndex,
+                            hasPhysics: rigidBody?.enabled || false
+                        });
+                    }
+                }
+            }
+        });
+        
+        const sceneData: GameSceneData = {
+            items: items,
+            timestamp: Date.now(),
+            version: '1.0.0'
+        };
+        
+        log(`ItemDropGame: 保存场景状态，物品数量: ${items.length}`);
+        return sceneData;
+    }
+
+    /**
+     * 恢复场景状态
+     */
+    public restoreSceneState(sceneData: GameSceneData): void {
+        if (!sceneData || !sceneData.items) {
+            log('ItemDropGame: 场景数据为空，跳过恢复');
+            return;
+        }
+        
+        log(`ItemDropGame: 开始恢复场景状态，物品数量: ${sceneData.items.length}`);
+        
+        // 清理现有物品（除了预览物品）
+        this.clearAllDroppedItems();
+        
+        // 恢复每个物品
+        sceneData.items.forEach(itemData => {
+            this.createItemFromData(itemData);
+        });
+        
+        log('ItemDropGame: 场景状态恢复完成');
+    }
+
+    /**
+     * 尝试恢复场景状态（根据服务器和本地数据对比）
+     */
+    private tryRestoreSceneState(): void {
+        if (!this.progressManager) {
+            log('ItemDropGame: 进度管理器未找到，跳过场景恢复');
+            return;
+        }
+        
+        // 获取进度管理器中的场景数据决策
+        const shouldUseServerData = this.progressManager.shouldUseServerSceneData();
+        const sceneData = this.progressManager.getSceneDataToRestore();
+        
+        if (sceneData) {
+            log(`ItemDropGame: 使用${shouldUseServerData ? '服务端' : '本地'}数据恢复场景`);
+            this.restoreSceneState(sceneData);
+        } else {
+            log('ItemDropGame: 没有场景数据需要恢复');
+        }
+    }
+
+    /**
+     * 清理所有已投放的物品（保留预览物品）
+     */
+    private clearAllDroppedItems(): void {
+        const itemsToRemove: Node[] = [];
+        
+        this.gameArea.children.forEach(child => {
+            if (child.name.includes('DropItem_') && child !== this.currentPreviewItem) {
+                itemsToRemove.push(child);
+            }
+        });
+        
+        itemsToRemove.forEach(item => {
+            if (item.isValid) {
+                item.destroy();
+            }
+        });
+        
+        // 清理合成标记
+        this.synthesizingItems.clear();
+    }
+
+    /**
+     * 根据数据创建物品
+     */
+    private createItemFromData(itemData: SceneItemData): void {
+        if (itemData.prefabIndex < 0 || itemData.prefabIndex >= this.itemPrefabs.length) {
+            warn(`ItemDropGame: 无效的预制体索引: ${itemData.prefabIndex}`);
+            return;
+        }
+        
+        const prefab = this.itemPrefabs[itemData.prefabIndex];
+        if (!prefab) {
+            warn(`ItemDropGame: 预制体不存在: ${itemData.prefabIndex}`);
+            return;
+        }
+        
+        // 创建物品
+        const item = instantiate(prefab);
+        this.gameArea.addChild(item);
+        
+        // 设置位置
+        item.setPosition(new Vec3(itemData.position.x, itemData.position.y, itemData.position.z));
+        
+        // 设置物品数据
+        let itemComponent = item.getComponent(ItemData);
+        if (!itemComponent) {
+            itemComponent = item.addComponent(ItemData);
+        }
+        itemComponent.setItemData(itemData.level, itemData.level * 100, 'restored_item');
+        
+        // 设置名称
+        item.name = `DropItem_L${itemData.level}`;
+        
+        // 设置物理状态
+        if (itemData.hasPhysics) {
+            // 延迟启用物理，避免位置冲突
+            this.scheduleOnce(() => {
+                this.enablePhysicsForItem(item);
+            }, 0.1);
+        } else {
+            this.disablePhysicsForItem(item);
+        }
+    }
+
+    /**
+     * 根据等级查找预制体索引
+     */
+    private findPrefabIndexByLevel(level: number): number {
+        // 等级直接对应预制体索引
+        if (level >= 0 && level < this.itemPrefabs.length) {
+            return level;
+        }
+        return -1;
+    }
+
+    /**
+     * 获取当前场景状态用于保存
+     */
+    public getCurrentSceneData(): GameSceneData {
+        return this.saveSceneState();
+    }
+
     /**
      * 清理事件监听器
      */
     protected onDestroy(): void {
+        // 保存当前场景状态
+        if (this.progressManager) {
+            try {
+                const sceneData = this.saveSceneState();
+                this.progressManager.updateLocalSceneData(sceneData);
+                log('ItemDropGame: 已保存场景状态到进度管理器');
+            } catch (error) {
+                warn('ItemDropGame: 保存场景状态失败:', error);
+            }
+        }
+
         input.off(Input.EventType.TOUCH_START, this.onScreenTouchStart, this);
         input.off(Input.EventType.TOUCH_MOVE, this.onScreenTouchMove, this);
         input.off(Input.EventType.TOUCH_END, this.onScreenTouchEnd, this);

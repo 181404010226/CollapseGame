@@ -1,5 +1,5 @@
 import { _decorator, Component, Label, log, warn, director } from 'cc';
-import { ApiConfig, LocalGameProgress } from '../API/ApiConfig';
+import { ApiConfig, LocalGameProgress, GameSceneData } from '../API/ApiConfig';
 import { DeviceInfoCollector } from '../API/DeviceInfoCollector';
 
 const { ccclass, property } = _decorator;
@@ -207,6 +207,30 @@ export class GameProgressManager extends Component {
     }
 
     private saveLocalProgress(): void {
+        // 如果场景中有ItemDropGame组件，获取当前场景状态并保存
+        try {
+            const scene = director.getScene();
+            if (scene) {
+                // 查找ItemDropGame组件
+                const components = scene.getComponentsInChildren(Component);
+                for (const comp of components) {
+                    if (comp.constructor.name === 'ItemDropGame') {
+                        const itemDropGame = comp as any;
+                        if (typeof itemDropGame.getCurrentSceneData === 'function') {
+                            const sceneData = itemDropGame.getCurrentSceneData();
+                            if (sceneData) {
+                                ApiConfig.updateLocalSceneData(sceneData);
+                                log('GameProgressManager: 本地场景数据已同步保存');
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+        } catch (error) {
+            // 静默处理错误，不影响正常的数据保存
+        }
+        
         ApiConfig.saveLocalProgressToStorage();
         log('GameProgressManager: 本地进度数据已保存');
     }
@@ -369,10 +393,7 @@ export class GameProgressManager extends Component {
             level: localProgress.level,
             wealthNum: localProgress.wealthNum,
             drawNum: localProgress.drawNum,
-            progress: localProgress.progress || JSON.stringify({
-                timestamp: Date.now(),
-                version: ApiConfig.getCurrentVersion()
-            })
+            progress: this.buildProgressString()  // 包含场景数据的progress字符串
         };
 
         const url = ApiConfig.getFullUrl(this.SAVE_ENDPOINT);
@@ -541,6 +562,90 @@ export class GameProgressManager extends Component {
      */
     public hasProgressData(): boolean {
         return ApiConfig.getLocalGameProgress() !== null;
+    }
+
+    // ======== 场景数据管理 ========
+    
+    /**
+     * 更新本地场景数据
+     */
+    public updateLocalSceneData(sceneData: GameSceneData): void {
+        ApiConfig.updateLocalSceneData(sceneData);
+        log('GameProgressManager: 本地场景数据已更新');
+    }
+
+    /**
+     * 判断是否应该使用服务器场景数据
+     */
+    public shouldUseServerSceneData(): boolean {
+        const localProgress = ApiConfig.getLocalGameProgress();
+        if (!localProgress) {
+            return false;
+        }
+
+        const localComposeGold = localProgress.goldNumCompose;
+        const localComposeRedBag = localProgress.redBagNumCompose;
+        const serverSceneData = localProgress.serverSceneData;
+        
+        // 如果没有服务器场景数据，使用本地数据
+        if (!serverSceneData) {
+            log('GameProgressManager: 没有服务器场景数据，使用本地数据');
+            return false;
+        }
+        
+        // 如果没有本地场景数据，使用服务器数据
+        if (!localProgress.localSceneData) {
+            log('GameProgressManager: 没有本地场景数据，使用服务器数据');
+            return true;
+        }
+
+        // 从服务器数据计算服务端的合成金币和红包
+        // 注意：这里的逻辑是如果服务端的合成数量更多，说明服务端数据更新
+        const serverProgress = ApiConfig.getLocalGameProgress();
+        if (serverProgress) {
+            const serverComposeGold = serverProgress.goldNumCompose;
+            const serverComposeRedBag = serverProgress.redBagNumCompose;
+            
+            const shouldUseServer = (serverComposeGold > localComposeGold) || 
+                                   (serverComposeRedBag > localComposeRedBag);
+                                   
+            log(`GameProgressManager: 数据对比 - 本地合成金币:${localComposeGold}, 服务端:${serverComposeGold}, 本地红包:${localComposeRedBag}, 服务端:${serverComposeRedBag}`);
+            log(`GameProgressManager: ${shouldUseServer ? '使用服务端数据' : '使用本地数据'}`);
+            
+            return shouldUseServer;
+        }
+        
+        return false;
+    }
+
+    /**
+     * 获取要恢复的场景数据
+     */
+    public getSceneDataToRestore(): GameSceneData | null {
+        const localProgress = ApiConfig.getLocalGameProgress();
+        if (!localProgress) {
+            return null;
+        }
+
+        if (this.shouldUseServerSceneData()) {
+            return localProgress.serverSceneData;
+        } else {
+            return localProgress.localSceneData;
+        }
+    }
+
+    /**
+     * 构建包含场景数据的progress字符串
+     */
+    private buildProgressString(): string {
+        const localSceneData = ApiConfig.getLocalSceneData();
+        const progressData = {
+            timestamp: Date.now(),
+            version: ApiConfig.getCurrentVersion(),
+            sceneData: localSceneData
+        };
+        
+        return JSON.stringify(progressData);
     }
 
     // ======== 工具方法 ========

@@ -32,6 +32,25 @@ export interface UserData {
 }
 
 /**
+ * 场景物品数据结构
+ */
+export interface SceneItemData {
+    level: number;           // 物品等级
+    position: { x: number, y: number, z: number };  // 物品位置
+    prefabIndex: number;     // 预制体索引
+    hasPhysics: boolean;     // 是否启用物理
+}
+
+/**
+ * 完整的游戏场景数据
+ */
+export interface GameSceneData {
+    items: SceneItemData[];         // 场景中的物品
+    timestamp: number;              // 保存时间戳
+    version: string;                // 数据版本
+}
+
+/**
  * 本地游戏进度数据结构
  */
 export interface LocalGameProgress {
@@ -52,6 +71,10 @@ export interface LocalGameProgress {
     
     // 合成统计
     times: number;             // 合成次数
+    
+    // 场景数据
+    localSceneData: GameSceneData | null;   // 本地场景数据
+    serverSceneData: GameSceneData | null;  // 服务器场景数据
     
     // 时间戳
     lastServerSyncTime: number;  // 上次服务器同步时间
@@ -163,6 +186,8 @@ export class ApiConfig {
             drawNum: 0,
             progress: '',
             times: 0,
+            localSceneData: null,
+            serverSceneData: null,
             lastServerSyncTime: 0,
             lastLocalSaveTime: Date.now()
         };
@@ -238,6 +263,20 @@ export class ApiConfig {
             this.LOCAL_GAME_PROGRESS.level = serverData.level || 1;
             this.LOCAL_GAME_PROGRESS.drawNum = serverData.drawNum || 0;
             this.LOCAL_GAME_PROGRESS.progress = serverData.progress || '';
+            
+            // 解析服务器场景数据
+            if (serverData.progress) {
+                try {
+                    const progressData = JSON.parse(serverData.progress);
+                    if (progressData.sceneData) {
+                        this.LOCAL_GAME_PROGRESS.serverSceneData = progressData.sceneData;
+                        console.log('ApiConfig: 已解析服务器场景数据', progressData.sceneData);
+                    }
+                } catch (error) {
+                    console.warn('ApiConfig: 解析服务器progress数据失败:', error);
+                }
+            }
+            
             this.LOCAL_GAME_PROGRESS.lastServerSyncTime = Date.now();
             
             this.saveLocalProgressToStorage();
@@ -260,6 +299,75 @@ export class ApiConfig {
             
             // 不立即保存到本地存储，由定时器统一保存
         }
+    }
+
+    /**
+     * 更新本地场景数据
+     */
+    public static updateLocalSceneData(sceneData: GameSceneData): void {
+        if (!this.LOCAL_GAME_PROGRESS) {
+            this.initializeDefaultProgress();
+        }
+        
+        if (this.LOCAL_GAME_PROGRESS) {
+            this.LOCAL_GAME_PROGRESS.localSceneData = sceneData;
+            // 立即保存本地数据，因为场景变化频繁
+            this.saveLocalProgressToStorage();
+        }
+    }
+
+    /**
+     * 更新服务器场景数据
+     */
+    public static updateServerSceneData(sceneData: GameSceneData): void {
+        if (!this.LOCAL_GAME_PROGRESS) {
+            this.initializeDefaultProgress();
+        }
+        
+        if (this.LOCAL_GAME_PROGRESS) {
+            this.LOCAL_GAME_PROGRESS.serverSceneData = sceneData;
+            this.saveLocalProgressToStorage();
+        }
+    }
+
+    /**
+     * 获取本地场景数据
+     */
+    public static getLocalSceneData(): GameSceneData | null {
+        return this.LOCAL_GAME_PROGRESS?.localSceneData || null;
+    }
+
+    /**
+     * 获取服务器场景数据
+     */
+    public static getServerSceneData(): GameSceneData | null {
+        return this.LOCAL_GAME_PROGRESS?.serverSceneData || null;
+    }
+
+    /**
+     * 判断是否应该使用服务器场景数据
+     */
+    public static shouldUseServerSceneData(): boolean {
+        if (!this.LOCAL_GAME_PROGRESS) {
+            return false;
+        }
+
+        const localProgress = this.LOCAL_GAME_PROGRESS;
+        const serverData = this.LOCAL_GAME_PROGRESS.serverSceneData;
+        
+        // 如果没有服务器数据，使用本地数据
+        if (!serverData) {
+            return false;
+        }
+        
+        // 如果没有本地数据，使用服务器数据
+        if (!localProgress.localSceneData) {
+            return true;
+        }
+
+        // 比较合成金币和红包数量，如果服务端数据更多，使用服务端数据
+        // 这个逻辑在GameProgressManager中实现
+        return false; // 默认使用本地数据
     }
 
     // 移除旧的游戏进度方法
