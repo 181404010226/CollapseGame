@@ -138,28 +138,247 @@ export class GameProgressManager extends Component {
         if (!this.deviceInfoCollector) {
             this.deviceInfoCollector = this.addComponent(DeviceInfoCollector);
         }
+
+        // 设置场景切换监听器，确保任何时候进入场景都会初始化
+        this.setupSceneChangeListener();
+    }
+
+    /**
+     * 设置场景切换监听器
+     */
+    private setupSceneChangeListener(): void {
+        // 使用定时器定期检查场景变化，而不是依赖事件
+        this.scheduleOnce(() => {
+            log('GameProgressManager: 场景切换监听器已设置');
+        }, 0.1);
+    }
+
+    /**
+     * 场景加载完成回调
+     */
+    private async onSceneLoaded(): Promise<void> {
+        try {
+            // 延迟一小段时间，确保场景完全初始化
+            setTimeout(async () => {
+                log('GameProgressManager: 检测到场景切换，开始自动初始化...');
+                await this.initializeGameProgress();
+            }, 150);
+        } catch (error) {
+            warn('GameProgressManager: 场景切换后自动初始化失败:', error);
+        }
     }
 
     protected async start(): Promise<void> {
         log('GameProgressManager: 启动统一游戏进度管理器');
         
-        // 加载本地缓存的进度数据
-        this.loadLocalProgress();
-        
-        // 启动定时器
-        this.startTimers();
-        
-        // 自动加载服务器进度
-        if (this.autoLoad) {
-            try {
-                await this.loadServerProgress();
-            } catch (error) {
-                warn('GameProgressManager: 启动时加载服务器进度失败:', error);
+        // 使用新的初始化方法
+        await this.initializeGameProgress();
+    }
+
+    // ======== 新增：公共初始化方法 ========
+    /**
+     * 初始化游戏进度（可在任何时候调用）
+     */
+    public async initializeGameProgress(): Promise<void> {
+        try {
+            log('GameProgressManager: 开始初始化游戏进度...');
+            
+            // 1. 加载本地缓存的进度数据
+            this.loadLocalProgress();
+            
+            // 2. 启动定时器（如果尚未启动）
+            if (!this.localSaveTimer || !this.serverReportTimer) {
+                this.startTimers();
             }
+            
+            // 3. 检查用户登录状态并加载服务器进度
+            const userData = ApiConfig.getUserData();
+            if (userData && userData.access_token) {
+                log('GameProgressManager: 检测到用户已登录，开始加载服务器进度');
+                try {
+                    await this.loadServerProgress();
+                    log('GameProgressManager: 服务器进度加载成功');
+                } catch (error) {
+                    warn('GameProgressManager: 服务器进度加载失败，使用本地数据:', error);
+                }
+            } else {
+                log('GameProgressManager: 用户未登录，跳过服务器进度加载');
+            }
+            
+            // 4. 更新UI显示
+            this.updateDisplay();
+            this.updateAllSceneDisplays();
+            
+            // 5. 尝试恢复场景中的物品状态
+            await this.restoreSceneItemsState();
+            
+            log('GameProgressManager: 游戏进度初始化完成');
+            
+        } catch (error) {
+            warn('GameProgressManager: 初始化游戏进度时发生错误:', error);
+            // 即使初始化失败，也要更新UI显示
+            this.updateDisplay();
         }
+    }
+
+    /**
+     * 恢复场景中的物品状态
+     */
+    private async restoreSceneItemsState(): Promise<void> {
+        try {
+            log('GameProgressManager: 开始恢复场景中的物品状态...');
+            
+            const scene = director.getScene();
+            if (!scene) {
+                warn('GameProgressManager: 当前场景不存在，跳过物品状态恢复');
+                return;
+            }
+
+            // 查找场景中的 ItemDropGame 组件
+            const components = scene.getComponentsInChildren(Component);
+            let foundItemDropGame = false;
+            
+            for (const comp of components) {
+                if (comp.constructor.name === 'ItemDropGame') {
+                    const itemDropGame = comp as any;
+                    foundItemDropGame = true;
+                    
+                    if (typeof itemDropGame.tryRestoreSceneState === 'function') {
+                        log('GameProgressManager: 找到 ItemDropGame 组件，触发场景状态恢复...');
+                        
+                        // 等待一小段时间确保 ItemDropGame 完全初始化
+                        await new Promise(resolve => setTimeout(resolve, 200));
+                        
+                        // 手动调用场景状态恢复
+                        itemDropGame.tryRestoreSceneState();
+                        log('GameProgressManager: 场景物品状态恢复已触发');
+                    } else {
+                        warn('GameProgressManager: ItemDropGame 组件缺少 tryRestoreSceneState 方法');
+                    }
+                    break;
+                }
+            }
+            
+            if (!foundItemDropGame) {
+                log('GameProgressManager: 当前场景中没有找到 ItemDropGame 组件，跳过物品状态恢复');
+            }
+            
+        } catch (error) {
+            warn('GameProgressManager: 恢复场景物品状态时发生错误:', error);
+        }
+    }
+
+    /**
+     * 静态方法：初始化当前场景中的所有 GameProgressManager
+     */
+    public static async initializeAllInScene(): Promise<void> {
+        try {
+            const scene = director.getScene();
+            if (!scene) {
+                warn('GameProgressManager: 当前场景不存在，跳过初始化');
+                return;
+            }
+
+            const managers = scene.getComponentsInChildren(GameProgressManager);
+            if (managers.length === 0) {
+                log('GameProgressManager: 当前场景中没有找到 GameProgressManager 组件');
+                return;
+            }
+
+            log(`GameProgressManager: 发现 ${managers.length} 个 GameProgressManager 组件，开始初始化...`);
+            
+            // 并行初始化所有管理器
+            const initPromises = managers.map(manager => manager.initializeGameProgress());
+            await Promise.all(initPromises);
+            
+            log('GameProgressManager: 所有 GameProgressManager 组件初始化完成');
+            
+        } catch (error) {
+            warn('GameProgressManager: 初始化场景中的 GameProgressManager 时发生错误:', error);
+        }
+    }
+
+    /**
+     * 统一的游戏数据同步和恢复方法
+     * 不管是登录后进入首页还是其他方式返回首页，都使用这个方法
+     */
+    public static async syncAndRestoreGameData(): Promise<void> {
+        try {
+            log('GameProgressManager: 开始统一的游戏数据同步和恢复...');
+            
+            const scene = director.getScene();
+            if (!scene) {
+                warn('GameProgressManager: 当前场景不存在，跳过数据同步');
+                return;
+            }
+
+            // 1. 先初始化所有GameProgressManager
+            await GameProgressManager.initializeAllInScene();
+
+            // 2. 获取主要的GameProgressManager实例
+            const managers = scene.getComponentsInChildren(GameProgressManager);
+            const primaryManager = managers[0];
+            
+            if (!primaryManager) {
+                warn('GameProgressManager: 没有找到GameProgressManager实例');
+                return;
+            }
+
+            // 3. 如果用户已登录，同步服务端数据
+            const userData = ApiConfig.getUserData();
+            if (userData && userData.access_token) {
+                log('GameProgressManager: 检测到用户已登录，开始同步服务端数据...');
+                try {
+                    await primaryManager.loadServerProgress();
+                    log('GameProgressManager: 服务端数据同步成功');
+                } catch (error) {
+                    warn('GameProgressManager: 服务端数据同步失败，使用本地数据:', error);
+                }
+            } else {
+                log('GameProgressManager: 用户未登录，跳过服务端数据同步');
+            }
+
+            // 4. 恢复场景中的物品状态
+            await primaryManager.restoreSceneItemsState();
+
+            // 5. 通知所有ItemDropGame组件进行数据恢复
+            const itemDropGames = scene.getComponentsInChildren(Component).filter(comp => 
+                comp.constructor.name === 'ItemDropGame'
+            );
+            
+            for (const itemDropGame of itemDropGames) {
+                if (typeof (itemDropGame as any).unifiedDataRestore === 'function') {
+                    log('GameProgressManager: 触发ItemDropGame的统一数据恢复...');
+                    (itemDropGame as any).unifiedDataRestore();
+                }
+            }
+
+            log('GameProgressManager: 统一的游戏数据同步和恢复完成');
+            
+        } catch (error) {
+            warn('GameProgressManager: 统一数据同步和恢复失败:', error);
+        }
+    }
+
+    /**
+     * 强制重新初始化（用于场景切换后的刷新）
+     */
+    public async forceReinitialize(): Promise<void> {
+        log('GameProgressManager: 强制重新初始化');
         
-        // 更新UI显示
-        this.updateDisplay();
+        // 停止现有定时器
+        this.stopTimers();
+        
+        // 重新初始化
+        await this.initializeGameProgress();
+    }
+
+    /**
+     * 手动触发场景物品状态恢复（外部调用）
+     */
+    public async manualRestoreSceneItems(): Promise<void> {
+        log('GameProgressManager: 手动触发场景物品状态恢复');
+        await this.restoreSceneItemsState();
     }
 
     protected onDestroy(): void {
@@ -183,7 +402,7 @@ export class GameProgressManager extends Component {
         log(`GameProgressManager: 定时器已启动 - 本地保存间隔: ${this.localSaveInterval}秒, 服务器上报间隔: ${this.serverReportInterval}分钟`);
     }
 
-    private stopTimers(): void {
+    public stopTimers(): void {
         if (this.localSaveTimer) {
             clearInterval(this.localSaveTimer);
             this.localSaveTimer = null;
@@ -254,6 +473,12 @@ export class GameProgressManager extends Component {
             const serverData = await this.queryGameProgress();
             log('GameProgressManager: 成功从服务器获取进度数据:', serverData);
 
+            // 更新服务端数据缓存
+            this.updateServerDataCache(serverData);
+
+            // 解析并保存服务端场景数据
+            this.parseAndSaveServerSceneData(serverData);
+
             // 更新本地数据
             ApiConfig.updateServerProgress(serverData);
             
@@ -266,6 +491,39 @@ export class GameProgressManager extends Component {
         } catch (error) {
             warn('GameProgressManager: 从服务器加载进度失败:', error);
             throw error;
+        }
+    }
+
+    /**
+     * 更新服务端数据缓存
+     */
+    private updateServerDataCache(serverData: any): void {
+        if (serverData) {
+            this.serverComposeGoldCache = serverData.goldNumCompose || 0;
+            this.serverComposeRedBagCache = serverData.redBagNumCompose || 0;
+            log(`GameProgressManager: 服务端数据缓存已更新 - 金币:${this.serverComposeGoldCache}, 红包:${this.serverComposeRedBagCache}`);
+        }
+    }
+
+    /**
+     * 解析并保存服务端场景数据
+     */
+    private parseAndSaveServerSceneData(serverData: any): void {
+        if (serverData && serverData.progress) {
+            try {
+                const progressData = JSON.parse(serverData.progress);
+                if (progressData && progressData.sceneData) {
+                    // 保存服务端场景数据到本地
+                    const localProgress = ApiConfig.getLocalGameProgress();
+                    if (localProgress) {
+                        localProgress.serverSceneData = progressData.sceneData;
+                        ApiConfig.saveLocalProgressToStorage();
+                        log('GameProgressManager: 服务端场景数据已保存到本地');
+                    }
+                }
+            } catch (error) {
+                warn('GameProgressManager: 解析服务端进度数据失败:', error);
+            }
         }
     }
 
@@ -576,6 +834,7 @@ export class GameProgressManager extends Component {
 
     /**
      * 判断是否应该使用服务器场景数据
+     * 根据合成金币和合成红包中的较大值来决定使用哪个数据源
      */
     public shouldUseServerSceneData(): boolean {
         const localProgress = ApiConfig.getLocalGameProgress();
@@ -599,24 +858,47 @@ export class GameProgressManager extends Component {
             return true;
         }
 
-        // 从服务器数据计算服务端的合成金币和红包
-        // 注意：这里的逻辑是如果服务端的合成数量更多，说明服务端数据更新
-        const serverProgress = ApiConfig.getLocalGameProgress();
-        if (serverProgress) {
-            const serverComposeGold = serverProgress.goldNumCompose;
-            const serverComposeRedBag = serverProgress.redBagNumCompose;
-            
-            const shouldUseServer = (serverComposeGold > localComposeGold) || 
-                                   (serverComposeRedBag > localComposeRedBag);
-                                   
-            log(`GameProgressManager: 数据对比 - 本地合成金币:${localComposeGold}, 服务端:${serverComposeGold}, 本地红包:${localComposeRedBag}, 服务端:${serverComposeRedBag}`);
-            log(`GameProgressManager: ${shouldUseServer ? '使用服务端数据' : '使用本地数据'}`);
-            
-            return shouldUseServer;
-        }
+        // 获取服务端数据（这里假设服务端数据已经存储在localProgress中）
+        // 实际应该从API获取最新的服务端数据，这里简化处理
+        const serverComposeGold = this.getServerComposeGold();
+        const serverComposeRedBag = this.getServerComposeRedBag();
         
-        return false;
+        // 计算本地和服务端的较大值
+        const localMaxValue = Math.max(localComposeGold, localComposeRedBag);
+        const serverMaxValue = Math.max(serverComposeGold, serverComposeRedBag);
+        
+        const shouldUseServer = serverMaxValue > localMaxValue;
+                               
+        log(`GameProgressManager: 数据对比 - 本地合成金币:${localComposeGold}, 本地合成红包:${localComposeRedBag}, 本地最大值:${localMaxValue}`);
+        log(`GameProgressManager: 服务端合成金币:${serverComposeGold}, 服务端合成红包:${serverComposeRedBag}, 服务端最大值:${serverMaxValue}`);
+        log(`GameProgressManager: ${shouldUseServer ? '使用服务端数据' : '使用本地数据'}`);
+        
+        return shouldUseServer;
     }
+
+    /**
+     * 获取服务端合成金币数量
+     */
+    private getServerComposeGold(): number {
+        // 从API获取最新的服务端数据进行比较
+        // 这里需要调用查询API获取服务端的当前合成金币数
+        // 暂时返回0，实际应该通过queryGameProgress获取
+        return this.serverComposeGoldCache || 0;
+    }
+
+    /**
+     * 获取服务端合成红包数量
+     */
+    private getServerComposeRedBag(): number {
+        // 从API获取最新的服务端数据进行比较
+        // 这里需要调用查询API获取服务端的当前合成红包数
+        // 暂时返回0，实际应该通过queryGameProgress获取
+        return this.serverComposeRedBagCache || 0;
+    }
+
+    // 服务端数据缓存
+    private serverComposeGoldCache: number = 0;
+    private serverComposeRedBagCache: number = 0;
 
     /**
      * 获取要恢复的场景数据

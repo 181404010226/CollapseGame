@@ -4,6 +4,7 @@ import { WeChatLogin, WeChatLoginResult } from '../API/WeChatLogin';
 import { PangleAd } from '../API/PangleAdManager';
 import { ApiConfig, UserData } from '../API/ApiConfig';
 import { LoginService, LoginResponse } from '../API/LoginService';
+import { GameProgressManager } from './GameProgressManager';
 const { ccclass, property } = _decorator;
 
 @ccclass('LoginController')
@@ -381,16 +382,11 @@ export class LoginController extends Component {
             ApiConfig.setUserData(userData);
             console.log('用户数据已保存到ApiConfig:', userData);
 
-            // 跳转到首页（目标场景）
-            this.navigateToTargetScene(async () => {
-                // 更新当前场景的UI显示（延迟更新以确保场景完全加载）
-                try {
-                    console.log('游客登录后开始更新当前场景UI...');
-                    console.log('游客登录后场景UI延迟更新已启动');
-                } catch (uiError) {
-                    console.error('游客登录后UI更新失败:', uiError);
-                }
-            });
+                    // 跳转到首页（目标场景）
+        this.navigateToTargetScene(async () => {
+            // 使用统一的数据同步和恢复方法
+            await GameProgressManager.syncAndRestoreGameData();
+        });
             
         } catch (err) {
             console.error('游客登录失败:', err);
@@ -480,13 +476,8 @@ export class LoginController extends Component {
         
         // 1. 先跳转到业务主场景
         this.navigateToTargetScene(async () => {
-            // 2. 更新当前场景的UI显示（延迟更新以确保场景完全加载）
-            try {
-                console.log('开始更新当前场景UI...');
-                console.log('场景UI延迟更新已启动');
-            } catch (uiError) {
-                console.error('UI更新失败:', uiError);
-            }
+            // 2. 使用统一的数据同步和恢复方法
+            await GameProgressManager.syncAndRestoreGameData();
 
             // 3. 在后台初始化穿山甲 SDK
             try {
@@ -593,6 +584,13 @@ export class LoginController extends Component {
 
             if (ok) {
                 console.log(`✅ 场景跳转成功: ${this.targetSceneName}`);
+                
+                // 等待一帧以确保场景完全加载
+                await new Promise(resolve => {
+                    // 使用 setTimeout 等待下一帧，确保场景完全加载
+                    setTimeout(resolve, 100);
+                });
+                
                 if (onSceneLoaded) {
                     try {
                         // 正确处理异步回调函数
@@ -610,6 +608,15 @@ export class LoginController extends Component {
             try {
                 await director.loadScene("首页");
                 console.log("✅ 成功跳转到默认场景");
+                
+                // 在回退场景中也要执行回调
+                if (onSceneLoaded) {
+                    try {
+                        await onSceneLoaded();
+                    } catch (callbackErr) {
+                        console.error("回退场景 onSceneLoaded 回调执行异常:", callbackErr);
+                    }
+                }
             } catch (fallbackErr) {
                 console.error("❌ 跳转到默认场景也失败:", fallbackErr);
             }
@@ -705,4 +712,6 @@ export class LoginController extends Component {
         
         this.onLoginSuccess(mockLoginResult);
     }
+
+
 } 

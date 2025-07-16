@@ -136,9 +136,9 @@ export class ItemDropGame extends Component {
     }
     
     protected start(): void {
-        // 尝试恢复场景状态
+        // 使用统一的数据恢复方法
         this.scheduleOnce(() => {
-            this.tryRestoreSceneState();
+            this.unifiedDataRestore();
         }, 0.1);
         
         this.generateNextPreviewItem();
@@ -480,6 +480,12 @@ export class ItemDropGame extends Component {
      * 为物品启用物理组件
      */
     private enablePhysicsForItem(item: Node): void {
+        // 检查节点是否仍然有效
+        if (!item || !item.isValid) {
+            warn('ItemDropGame: 尝试启用物理组件的节点已被销毁');
+            return;
+        }
+        
         const rigidBody = item.getComponent(RigidBody2D);
         if (rigidBody) {
             rigidBody.enabled = true;
@@ -707,6 +713,12 @@ export class ItemDropGame extends Component {
      * 禁用物品的物理组件
      */
     private disablePhysicsForItem(item: Node): void {
+        // 检查节点是否仍然有效
+        if (!item || !item.isValid) {
+            warn('ItemDropGame: 尝试禁用物理组件的节点已被销毁');
+            return;
+        }
+        
         const rigidBody = item.getComponent(RigidBody2D);
         const collider = item.getComponent(Collider2D);
         
@@ -738,7 +750,10 @@ export class ItemDropGame extends Component {
         
         // 延迟启用物理组件
         this.scheduleOnce(() => {
-            this.enablePhysicsForItem(newItem);
+            // 确保节点在延迟执行时仍然有效
+            if (newItem && newItem.isValid) {
+                this.enablePhysicsForItem(newItem);
+            }
         }, 0.1);
     }
     
@@ -942,7 +957,7 @@ export class ItemDropGame extends Component {
     private disableAllPhysics(): void {
         // 禁用所有已投放物品的物理组件
         this.gameArea.children.forEach(child => {
-            if (child.name.includes('DropItem_')) {
+            if (child.name.includes('DropItem_') && child.isValid) {
                 this.disablePhysicsForItem(child);
             }
         });
@@ -954,7 +969,7 @@ export class ItemDropGame extends Component {
     private enableAllPhysics(): void {
         // 重新启用所有已投放物品的物理组件
         this.gameArea.children.forEach(child => {
-            if (child.name.includes('DropItem_')) {
+            if (child.name.includes('DropItem_') && child.isValid) {
                 this.enablePhysicsForItem(child);
             }
         });
@@ -1081,7 +1096,7 @@ export class ItemDropGame extends Component {
         
         // 遍历游戏区域中的所有物品
         this.gameArea.children.forEach(child => {
-            if (child.name.includes('DropItem_') && child !== this.currentPreviewItem) {
+            if (child && child.isValid && child.name.includes('DropItem_') && child !== this.currentPreviewItem) {
                 const itemData = child.getComponent(ItemData);
                 if (itemData) {
                     const position = child.getPosition();
@@ -1138,7 +1153,7 @@ export class ItemDropGame extends Component {
     /**
      * 尝试恢复场景状态（根据服务器和本地数据对比）
      */
-    private tryRestoreSceneState(): void {
+    public tryRestoreSceneState(): void {
         if (!this.progressManager) {
             log('ItemDropGame: 进度管理器未找到，跳过场景恢复');
             return;
@@ -1157,19 +1172,49 @@ export class ItemDropGame extends Component {
     }
 
     /**
+     * 统一的数据恢复方法
+     * 不管是登录后进入首页还是其他方式返回首页，都使用这个方法
+     */
+    public unifiedDataRestore(): void {
+        log('ItemDropGame: 开始统一数据恢复流程...');
+        
+        try {
+            // 1. 确保进度管理器存在
+            if (!this.progressManager) {
+                this.progressManager = director.getScene()?.getComponentInChildren(GameProgressManager);
+                if (!this.progressManager) {
+                    warn('ItemDropGame: 无法找到GameProgressManager，跳过数据恢复');
+                    return;
+                }
+            }
+
+            // 2. 执行场景状态恢复
+            this.tryRestoreSceneState();
+
+            // 3. 确保UI显示是最新的
+            GameProgressManager.updateAllDisplays();
+
+            log('ItemDropGame: 统一数据恢复完成');
+            
+        } catch (error) {
+            warn('ItemDropGame: 统一数据恢复失败:', error);
+        }
+    }
+
+    /**
      * 清理所有已投放的物品（保留预览物品）
      */
     private clearAllDroppedItems(): void {
         const itemsToRemove: Node[] = [];
         
         this.gameArea.children.forEach(child => {
-            if (child.name.includes('DropItem_') && child !== this.currentPreviewItem) {
+            if (child && child.isValid && child.name.includes('DropItem_') && child !== this.currentPreviewItem) {
                 itemsToRemove.push(child);
             }
         });
         
         itemsToRemove.forEach(item => {
-            if (item.isValid) {
+            if (item && item.isValid) {
                 item.destroy();
             }
         });
@@ -1214,7 +1259,10 @@ export class ItemDropGame extends Component {
         if (itemData.hasPhysics) {
             // 延迟启用物理，避免位置冲突
             this.scheduleOnce(() => {
-                this.enablePhysicsForItem(item);
+                // 确保节点在延迟执行时仍然有效
+                if (item && item.isValid) {
+                    this.enablePhysicsForItem(item);
+                }
             }, 0.1);
         } else {
             this.disablePhysicsForItem(item);
@@ -1243,16 +1291,6 @@ export class ItemDropGame extends Component {
      * 清理事件监听器
      */
     protected onDestroy(): void {
-        // 保存当前场景状态
-        if (this.progressManager) {
-            try {
-                const sceneData = this.saveSceneState();
-                this.progressManager.updateLocalSceneData(sceneData);
-                log('ItemDropGame: 已保存场景状态到进度管理器');
-            } catch (error) {
-                warn('ItemDropGame: 保存场景状态失败:', error);
-            }
-        }
 
         input.off(Input.EventType.TOUCH_START, this.onScreenTouchStart, this);
         input.off(Input.EventType.TOUCH_MOVE, this.onScreenTouchMove, this);
