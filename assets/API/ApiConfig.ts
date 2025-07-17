@@ -81,6 +81,28 @@ export interface LocalGameProgress {
     lastLocalSaveTime: number;   // 上次本地保存时间
 }
 
+export interface LotteryItem {
+    id: number;
+    isWin: boolean;
+    rewardType: string;
+    rewardNum: number;
+}
+
+export interface BaseReq {
+    androidId: string;
+    deviceId: string;
+    requestId: string;
+    timeStamp: number;
+    packageName?: string;
+}
+
+export interface AjaxResult {
+    error: boolean;
+    success: boolean;
+    warn: boolean;
+    empty: boolean;
+}
+
 /**
  * API配置类
  */
@@ -258,7 +280,7 @@ export class ApiConfig {
             );
             
             // 更新其他数据
-            this.LOCAL_GAME_PROGRESS.wealthNum = serverData.wealthNum || 0;
+            this.LOCAL_GAME_PROGRESS.wealthNum = Math.max(this.LOCAL_GAME_PROGRESS.wealthNum, serverData.wealthNum || 0);
             this.LOCAL_GAME_PROGRESS.exp = serverData.exp || 0;
             this.LOCAL_GAME_PROGRESS.level = serverData.level || 1;
             this.LOCAL_GAME_PROGRESS.drawNum = serverData.drawNum || 0;
@@ -402,6 +424,8 @@ export class ApiConfig {
         // 游戏相关
         QUERY_GAME_PROGRESS: '/game/queryGameProgress',
         SAVE_GAME_PROGRESS: '/game/saveGameProgress',
+        LOTTERY: '/game/lottery',
+        PRIZE: '/game/prize',
         
         // 其他端点...
     };

@@ -435,7 +435,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 750,
-      "height": 1010
+      "height": 1010.0000000000001
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -666,8 +666,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 97.7412109375,
-      "height": 32.75999999999999
+      "width": 120,
+      "height": 32
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -705,11 +705,11 @@
     "_string": "100金币",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 26,
+    "_actualFontSize": 27,
     "_fontSize": 26,
     "_fontFamily": "PingFang SC",
     "_lineHeight": 0,
-    "_overflow": 0,
+    "_overflow": 2,
     "_enableWrapText": true,
     "_font": null,
     "_isSystemFontUsed": true,
@@ -762,10 +762,10 @@
     },
     "_alignFlags": 45,
     "_target": null,
-    "_left": 22.12939453125,
-    "_right": 22.12939453125,
-    "_top": 99.24000000000001,
-    "_bottom": 10,
+    "_left": 11,
+    "_right": 11,
+    "_top": 99.62000000000012,
+    "_bottom": 10.38000000000011,
     "_horizontalCenter": 0,
     "_verticalCenter": 0,
     "_isAbsLeft": true,
@@ -812,7 +812,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 142,
-      "height": 142
+      "height": 142.00000000000023
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -1043,8 +1043,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 62.7529296875,
-      "height": 32.75999999999999
+      "width": 120,
+      "height": 32
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -1082,11 +1082,11 @@
     "_string": "0.8元",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 26,
+    "_actualFontSize": 27,
     "_fontSize": 26,
     "_fontFamily": "PingFang SC",
     "_lineHeight": 0,
-    "_overflow": 0,
+    "_overflow": 2,
     "_enableWrapText": true,
     "_font": null,
     "_isSystemFontUsed": true,
@@ -1139,10 +1139,10 @@
     },
     "_alignFlags": 45,
     "_target": null,
-    "_left": 38.62353515625,
-    "_right": 40.62353515625,
-    "_top": 99.24000000000001,
-    "_bottom": 10,
+    "_left": 10,
+    "_right": 12,
+    "_top": 99.62000000000012,
+    "_bottom": 10.38000000000011,
     "_horizontalCenter": 0,
     "_verticalCenter": 0,
     "_isAbsLeft": true,
@@ -1189,7 +1189,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 142,
-      "height": 142
+      "height": 142.00000000000023
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -1420,8 +1420,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 94,
-      "height": 37
+      "width": 120,
+      "height": 32
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -1459,7 +1459,7 @@
     "_string": "200金币",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 25,
+    "_actualFontSize": 27,
     "_fontSize": 26,
     "_fontFamily": "PingFang SC",
     "_lineHeight": 0,
@@ -1516,10 +1516,10 @@
     },
     "_alignFlags": 45,
     "_target": null,
-    "_left": 24,
-    "_right": 24,
-    "_top": 95,
-    "_bottom": 10,
+    "_left": 11,
+    "_right": 11,
+    "_top": 97.50000000000011,
+    "_bottom": 12.500000000000114,
     "_horizontalCenter": 0,
     "_verticalCenter": 0,
     "_isAbsLeft": true,
@@ -1566,7 +1566,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 142,
-      "height": 142
+      "height": 142.00000000000023
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -1797,8 +1797,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 41.2470703125,
-      "height": 32.75999999999999
+      "width": 120,
+      "height": 32
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -1836,11 +1836,11 @@
     "_string": "3元",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 26,
+    "_actualFontSize": 27,
     "_fontSize": 26,
     "_fontFamily": "PingFang SC",
     "_lineHeight": 0,
-    "_overflow": 0,
+    "_overflow": 2,
     "_enableWrapText": true,
     "_font": null,
     "_isSystemFontUsed": true,
@@ -1893,10 +1893,10 @@
     },
     "_alignFlags": 45,
     "_target": null,
-    "_left": 48.6064453125,
-    "_right": 52.146484375,
-    "_top": 99.24000000000001,
-    "_bottom": 10,
+    "_left": 9.22998046875,
+    "_right": 12.77001953125,
+    "_top": 99.62000000000012,
+    "_bottom": 10.38000000000011,
     "_horizontalCenter": 0,
     "_verticalCenter": 0,
     "_isAbsLeft": true,
@@ -1943,7 +1943,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 142,
-      "height": 142
+      "height": 142.00000000000023
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -2174,8 +2174,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 62.7529296875,
-      "height": 32.75999999999999
+      "width": 120,
+      "height": 32
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -2213,11 +2213,11 @@
     "_string": "1.5元",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 26,
+    "_actualFontSize": 27,
     "_fontSize": 26,
     "_fontFamily": "PingFang SC",
     "_lineHeight": 0,
-    "_overflow": 0,
+    "_overflow": 2,
     "_enableWrapText": true,
     "_font": null,
     "_isSystemFontUsed": true,
@@ -2270,10 +2270,10 @@
     },
     "_alignFlags": 45,
     "_target": null,
-    "_left": 40.1953125,
-    "_right": 39.0517578125,
-    "_top": 99.24000000000001,
-    "_bottom": 10,
+    "_left": 11.57177734375,
+    "_right": 10.42822265625,
+    "_top": 99.62000000000012,
+    "_bottom": 10.38000000000011,
     "_horizontalCenter": 0,
     "_verticalCenter": 0,
     "_isAbsLeft": true,
@@ -2320,7 +2320,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 142,
-      "height": 142
+      "height": 142.00000000000023
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -2551,8 +2551,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 97.7412109375,
-      "height": 32.75999999999999
+      "width": 120,
+      "height": 32
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -2590,11 +2590,11 @@
     "_string": "800金币",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 26,
+    "_actualFontSize": 27,
     "_fontSize": 26,
     "_fontFamily": "PingFang SC",
     "_lineHeight": 0,
-    "_overflow": 0,
+    "_overflow": 2,
     "_enableWrapText": true,
     "_font": null,
     "_isSystemFontUsed": true,
@@ -2647,10 +2647,10 @@
     },
     "_alignFlags": 45,
     "_target": null,
-    "_left": 20.3193359375,
-    "_right": 23.939453125,
-    "_top": 99.24000000000001,
-    "_bottom": 10,
+    "_left": 9.18994140625,
+    "_right": 12.81005859375,
+    "_top": 99.62000000000012,
+    "_bottom": 10.38000000000011,
     "_horizontalCenter": 0,
     "_verticalCenter": 0,
     "_isAbsLeft": true,
@@ -2697,7 +2697,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 142,
-      "height": 142
+      "height": 142.00000000000023
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -2928,8 +2928,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 56.494140625,
-      "height": 32.75999999999999
+      "width": 120,
+      "height": 32
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -2967,11 +2967,11 @@
     "_string": "10元",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 26,
+    "_actualFontSize": 27,
     "_fontSize": 26,
     "_fontFamily": "PingFang SC",
     "_lineHeight": 0,
-    "_overflow": 0,
+    "_overflow": 2,
     "_enableWrapText": true,
     "_font": null,
     "_isSystemFontUsed": true,
@@ -3024,10 +3024,10 @@
     },
     "_alignFlags": 45,
     "_target": null,
-    "_left": 42.712890625,
-    "_right": 42.79296875,
-    "_top": 99.24000000000001,
-    "_bottom": 10,
+    "_left": 10.9599609375,
+    "_right": 11.0400390625,
+    "_top": 99.62000000000012,
+    "_bottom": 10.38000000000011,
     "_horizontalCenter": 0,
     "_verticalCenter": 0,
     "_isAbsLeft": true,
@@ -3074,7 +3074,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 142,
-      "height": 142
+      "height": 142.00000000000023
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -3305,8 +3305,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 97.7412109375,
-      "height": 32.75999999999999
+      "width": 120,
+      "height": 32
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -3344,11 +3344,11 @@
     "_string": "500金币",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 26,
+    "_actualFontSize": 27,
     "_fontSize": 26,
     "_fontFamily": "PingFang SC",
     "_lineHeight": 0,
-    "_overflow": 0,
+    "_overflow": 2,
     "_enableWrapText": true,
     "_font": null,
     "_isSystemFontUsed": true,
@@ -3401,10 +3401,10 @@
     },
     "_alignFlags": 45,
     "_target": null,
-    "_left": 20.3193359375,
-    "_right": 23.939453125,
-    "_top": 99.24000000000001,
-    "_bottom": 10,
+    "_left": 9.18994140625,
+    "_right": 12.81005859375,
+    "_top": 99.62000000000012,
+    "_bottom": 10.38000000000011,
     "_horizontalCenter": 0,
     "_verticalCenter": 0,
     "_isAbsLeft": true,
@@ -3451,7 +3451,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 142,
-      "height": 142
+      "height": 142.00000000000023
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -3626,7 +3626,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 130.201171875,
-      "height": 50.40000000000009
+      "height": 50.40000000000032
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -3824,7 +3824,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 167.361328125,
-      "height": 50.40000000000009
+      "height": 50.40000000000032
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -4863,7 +4863,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 38,
-      "height": 38
+      "height": 38.00000000000023
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -5063,7 +5063,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 0,
-      "height": 0
+      "height": 2.2737367544323206e-13
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -5268,7 +5268,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 100,
-      "height": 68.66000000000008
+      "height": 68.66000000000031
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -5443,7 +5443,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 80,
-      "height": 80
+      "height": 80.00000000000023
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -5618,7 +5618,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 100,
-      "height": 68.66000000000008
+      "height": 68.66000000000031
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -5793,7 +5793,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 80,
-      "height": 80
+      "height": 80.00000000000023
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -5968,7 +5968,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 80,
-      "height": 80
+      "height": 80.00000000000023
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -6143,7 +6143,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 100,
-      "height": 68.66000000000008
+      "height": 68.66000000000031
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -6318,7 +6318,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 80,
-      "height": 80
+      "height": 80.00000000000023
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -6493,7 +6493,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 100,
-      "height": 68.66000000000008
+      "height": 68.66000000000031
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -6615,7 +6615,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 0,
-      "height": 0
+      "height": 2.2737367544323206e-13
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -6820,7 +6820,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 131,
-      "height": 131
+      "height": 131.00000000000023
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -6995,7 +6995,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 131,
-      "height": 131
+      "height": 131.00000000000023
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -7170,7 +7170,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 131,
-      "height": 131
+      "height": 131.00000000000023
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -7345,7 +7345,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 131,
-      "height": 131
+      "height": 131.00000000000023
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -7520,7 +7520,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 131,
-      "height": 131
+      "height": 131.00000000000023
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -7695,7 +7695,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 131,
-      "height": 131
+      "height": 131.00000000000023
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -7870,7 +7870,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 131,
-      "height": 131
+      "height": 131.00000000000023
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -8045,7 +8045,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 131,
-      "height": 131
+      "height": 131.00000000000023
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -8167,7 +8167,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 100,
-      "height": 100
+      "height": 100.00000000000023
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -9951,7 +9951,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 0,
-      "height": 0
+      "height": 2.2737367544323206e-13
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -10073,6 +10073,9 @@
     },
     "remainingLabel": {
       "__id__": 152
+    },
+    "extraRemainingLabel": {
+      "__id__": 177
     },
     "rotateSpeed": 0.1,
     "winningPopup": {

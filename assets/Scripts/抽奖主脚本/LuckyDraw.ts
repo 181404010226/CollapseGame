@@ -1,4 +1,7 @@
 import { _decorator, Component, Node, Sprite, SpriteFrame, Button, Label, find, Vec3 } from 'cc';
+import { ApiConfig, LotteryItem, BaseReq, AjaxResult } from '../../API/ApiConfig';
+import { GameProgressManager } from '../GameProgressManager';
+import { DeviceInfoCollector } from '../../API/DeviceInfoCollector';
 const { ccclass, property } = _decorator;
 
 @ccclass('LuckyDraw')
@@ -17,6 +20,9 @@ export class LuckyDraw extends Component {
 
     @property(Label)
     public remainingLabel: Label = null;  // 剩余次数文本
+
+    @property(Label)
+    public extraRemainingLabel: Label = null; // 额外剩余次数文本
 
     @property
     public rotateSpeed: number = 0.15;  // 转动速度
@@ -66,6 +72,7 @@ export class LuckyDraw extends Component {
     private originalSprites: SpriteFrame[] = [];  // 原始图片
     private availablePrizeIndices: number[] = [];  // 可抽奖的奖品索引数组
     private claimedPrizes: boolean[] = [];  // 记录每个奖品是否已被领取
+    private previousClaimed: boolean[] = []; // 记录抽奖前的已领取状态
 
     // 常量配置
     private readonly MIN_ROTATIONS = 20;  // 最少旋转次数
@@ -82,7 +89,7 @@ export class LuckyDraw extends Component {
     /**
      * 初始化抽奖系统
      */
-    private initializeSystem(): void {
+    private async initializeSystem(): Promise<void> {
         // 保存原始图片
         this.originalSprites = [];
         this.prizeNodes.forEach((node, index) => {
@@ -100,6 +107,7 @@ export class LuckyDraw extends Component {
         for (let i = 0; i < this.prizeNodes.length; i++) {
             this.availablePrizeIndices.push(i);
         }
+        this.previousClaimed = [...this.claimedPrizes]; // Initialize previous claimed state
 
         // 隐藏所有已领取节点
         this.claimedNodes.forEach(node => {
@@ -114,6 +122,63 @@ export class LuckyDraw extends Component {
         }
         if (this.winningBackground) {
             this.winningBackground.active = false;
+        }
+    }
+
+    private async fetchLotteryData(): Promise<void> {
+        try {
+            const url = ApiConfig.getFullUrl(ApiConfig.ENDPOINTS.LOTTERY);
+            const token = ApiConfig.getUserData()?.access_token;
+            if (!token) throw new Error('No token');
+            
+            console.log('Fetching lottery data from:', url);
+            console.log('Headers:', { Authorization: `Bearer ${token}` });
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (!response.ok) throw new Error('Fetch failed');
+            
+            const rawData = await response.json();
+            console.log('Received lottery data:', rawData);
+            if (rawData.code !== 200) throw new Error('API error: ' + rawData.msg);
+            const prizes = rawData.data.detail;
+            console.log('Prize details:', JSON.stringify(prizes));
+            this.remainingDraws = rawData.data.count;
+            let data: LotteryItem[] = Array.isArray(prizes) ? prizes : [prizes];
+            if (data.length !== 8) {
+                console.warn('Unexpected number of prizes:', data.length);
+            }
+            
+            // Setup prizes based on data (assume 8 items)
+            this.availablePrizeIndices = [];
+            this.claimedPrizes = new Array(8).fill(false);
+            
+            data.forEach((item, index) => {
+                // Set prize node labels etc.
+                const prizeNode = this.prizeNodes[index];
+                if (prizeNode) {
+                    const label = prizeNode.getComponentInChildren(Label);
+                    if (label) {
+                        label.string = `${item.rewardNum} ${item.rewardType === 'gold' ? '金币' : '红包'}`;
+                    }
+                }
+                if (item.isWin) {
+                    this.claimedPrizes[index] = true;
+                    this.claimedNodes[index].active = true;
+                } else {
+                    this.availablePrizeIndices.push(index);
+                }
+            });
+            
+            // this.remainingDraws = this.availablePrizeIndices.length; // Or fetch from server if separate
+            
+        } catch (error) {
+            console.error('Failed to fetch lottery data:', error);
         }
     }
 
@@ -139,6 +204,10 @@ export class LuckyDraw extends Component {
         // 更新剩余次数
         if (this.remainingLabel) {
             this.remainingLabel.string = `剩余${this.remainingDraws}次`;
+        }
+
+        if (this.extraRemainingLabel) {
+            this.extraRemainingLabel.string = `剩余${this.remainingDraws}次`;
         }
 
         // 更新按钮内的次数显示
@@ -177,7 +246,7 @@ export class LuckyDraw extends Component {
     /**
      * 开始抽奖流程
      */
-    private startDrawing(): void {
+    private async startDrawing(): Promise<void> {
         // 检查是否还有可抽奖的奖品
         if (this.availablePrizeIndices.length === 0) {
             return;
@@ -188,9 +257,9 @@ export class LuckyDraw extends Component {
         this.remainingDraws--;
         this.rotationCount = 0;
         
-        // 从可抽奖的奖品中随机选择目标位置
-        const randomIndex = Math.floor(Math.random() * this.availablePrizeIndices.length);
-        this.targetIndex = this.availablePrizeIndices[randomIndex];
+        // Instead of random, call prize API
+        const prizeResult = await this.drawPrize();
+        this.targetIndex = prizeResult.id; // Assume returns the won item id/index
         
         // 更新UI
         this.updateUI();
@@ -365,7 +434,8 @@ export class LuckyDraw extends Component {
      * 显示抽奖弹窗 - 供外部按钮调用
      * 点击首页时调用此方法显示抽奖页面（背景蒙版保持）
      */
-    public showLuckyDrawPopup(): void {
+    public async showLuckyDrawPopup(): Promise<void> {
+        await this.fetchLotteryData();
         // 显示整个抽奖界面
         if (this.luckyDrawRoot) {
             this.luckyDrawRoot.active = true;
@@ -420,5 +490,64 @@ export class LuckyDraw extends Component {
         this.currentIndex = 0;
         this.targetIndex = -1;
         this.rotationCount = 0;
+    }
+
+    private async drawPrize(): Promise<{id: number}> {
+        try {
+            const url = ApiConfig.getFullUrl(ApiConfig.ENDPOINTS.PRIZE);
+            const token = ApiConfig.getUserData()?.access_token;
+            if (!token) throw new Error('No token');
+            
+            const deviceInfoCollector = find('DeviceInfoCollector')?.getComponent(DeviceInfoCollector);
+            if (!deviceInfoCollector) throw new Error('No DeviceInfoCollector');
+            const deviceInfo = await deviceInfoCollector.collectDeviceInfo();
+            
+            const req: BaseReq = {
+                androidId: deviceInfo.androidId || '',
+                deviceId: deviceInfo.deviceId || '',
+                requestId: `draw_${Date.now()}`,
+                timeStamp: Date.now(),
+                packageName: ApiConfig.getPackageName()
+            };
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(req)
+            });
+            
+            if (!response.ok) throw new Error('Draw failed');
+            
+            const data: AjaxResult = await response.json();
+            if (!data.success) throw new Error('Draw not successful');
+            
+            // After success, refetch lottery to find the new won prize
+            await this.fetchLotteryData();  // This will update claimed etc.
+            
+            // Sync progress.const manager = this.getComponent(GameProgressManager) || find('GameProgressManager')?.getComponent(GameProgressManager);
+            const manager = find('GameProgressManager')?.getComponent(GameProgressManager);
+            if (manager) {
+                await manager.loadServerProgress();
+            }
+
+            // Find the newly won prize (compare previous claimed)
+            // For simplicity, assume we can find it, or modify to return from server if possible
+            // Placeholder: find the one that became true
+            let newWonIndex = -1;
+            for (let i = 0; i < this.claimedPrizes.length; i++) {
+                if (this.claimedPrizes[i] && !this.previousClaimed[i]) {  // Need to store previous
+                    newWonIndex = i;
+                    break;
+                }
+            }
+            return {id: newWonIndex};
+            
+        } catch (error) {
+            console.error('Failed to draw prize:', error);
+            throw error;
+        }
     }
 } 

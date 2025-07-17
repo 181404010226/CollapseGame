@@ -501,7 +501,8 @@ export class GameProgressManager extends Component {
         if (serverData) {
             this.serverComposeGoldCache = serverData.goldNumCompose || 0;
             this.serverComposeRedBagCache = serverData.redBagNumCompose || 0;
-            log(`GameProgressManager: 服务端数据缓存已更新 - 金币:${this.serverComposeGoldCache}, 红包:${this.serverComposeRedBagCache}`);
+            this.serverWealthCache = serverData.wealthNum || 0;
+            log(`GameProgressManager: 服务端数据缓存已更新 - 金币:${this.serverComposeGoldCache}, 红包:${this.serverComposeRedBagCache}, 财神:${this.serverWealthCache}`);
         }
     }
 
@@ -844,6 +845,7 @@ export class GameProgressManager extends Component {
 
         const localComposeGold = localProgress.goldNumCompose;
         const localComposeRedBag = localProgress.redBagNumCompose;
+        const localWealth = localProgress.wealthNum || 0;
         const serverSceneData = localProgress.serverSceneData;
         
         // 如果没有服务器场景数据，使用本地数据
@@ -862,15 +864,16 @@ export class GameProgressManager extends Component {
         // 实际应该从API获取最新的服务端数据，这里简化处理
         const serverComposeGold = this.getServerComposeGold();
         const serverComposeRedBag = this.getServerComposeRedBag();
+        const serverWealth = this.serverWealthCache || 0;
         
         // 计算本地和服务端的较大值
-        const localMaxValue = Math.max(localComposeGold, localComposeRedBag);
-        const serverMaxValue = Math.max(serverComposeGold, serverComposeRedBag);
+        const localMaxValue = Math.max(localComposeGold, localComposeRedBag, localWealth);
+        const serverMaxValue = Math.max(serverComposeGold, serverComposeRedBag, serverWealth);
         
         const shouldUseServer = serverMaxValue > localMaxValue;
                                
-        log(`GameProgressManager: 数据对比 - 本地合成金币:${localComposeGold}, 本地合成红包:${localComposeRedBag}, 本地最大值:${localMaxValue}`);
-        log(`GameProgressManager: 服务端合成金币:${serverComposeGold}, 服务端合成红包:${serverComposeRedBag}, 服务端最大值:${serverMaxValue}`);
+        log(`GameProgressManager: 数据对比 - 本地合成金币:${localComposeGold}, 本地合成红包:${localComposeRedBag}, 本地财神:${localWealth}, 本地最大值:${localMaxValue}`);
+        log(`GameProgressManager: 服务端合成金币:${serverComposeGold}, 服务端合成红包:${serverComposeRedBag}, 服务端财神:${serverWealth}, 服务端最大值:${serverMaxValue}`);
         log(`GameProgressManager: ${shouldUseServer ? '使用服务端数据' : '使用本地数据'}`);
         
         return shouldUseServer;
@@ -899,6 +902,7 @@ export class GameProgressManager extends Component {
     // 服务端数据缓存
     private serverComposeGoldCache: number = 0;
     private serverComposeRedBagCache: number = 0;
+    private serverWealthCache: number = 0;
 
     /**
      * 获取要恢复的场景数据
