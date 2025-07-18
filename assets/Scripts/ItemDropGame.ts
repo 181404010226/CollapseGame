@@ -12,7 +12,6 @@ export interface SceneItemData {
     level: number;           // 物品等级
     position: { x: number, y: number, z: number };  // 物品位置
     prefabIndex: number;     // 预制体索引
-    hasPhysics: boolean;     // 是否启用物理
 }
 
 /**
@@ -1110,8 +1109,7 @@ export class ItemDropGame extends Component {
                         items.push({
                             level: level,
                             position: { x: position.x, y: position.y, z: position.z },
-                            prefabIndex: prefabIndex,
-                            hasPhysics: rigidBody?.enabled || false
+                            prefabIndex: prefabIndex
                         });
                     }
                 }
@@ -1255,18 +1253,14 @@ export class ItemDropGame extends Component {
         // 设置名称
         item.name = `DropItem_L${itemData.level}`;
         
-        // 设置物理状态
-        if (itemData.hasPhysics) {
-            // 延迟启用物理，避免位置冲突
-            this.scheduleOnce(() => {
-                // 确保节点在延迟执行时仍然有效
-                if (item && item.isValid) {
-                    this.enablePhysicsForItem(item);
-                }
-            }, 0.1);
-        } else {
-            this.disablePhysicsForItem(item);
-        }
+        // 设置物理状态 - 所有恢复的物品都启用物理组件
+        // 延迟启用物理，避免位置冲突
+        this.scheduleOnce(() => {
+            // 确保节点在延迟执行时仍然有效
+            if (item && item.isValid) {
+                this.enablePhysicsForItem(item);
+            }
+        }, 0.1);
     }
 
     /**
@@ -1307,4 +1301,4 @@ export class ItemDropGame extends Component {
             this.longPressTimerCallback = null;
         }
     }
-} 
+}

@@ -38,7 +38,6 @@ export interface SceneItemData {
     level: number;           // 物品等级
     position: { x: number, y: number, z: number };  // 物品位置
     prefabIndex: number;     // 预制体索引
-    hasPhysics: boolean;     // 是否启用物理
 }
 
 /**
@@ -605,4 +604,4 @@ export class ApiConfig {
     public static getAvailableEnvironments(): string[] {
         return Object.keys(this.ENVIRONMENTS);
     }
-} 
+}
