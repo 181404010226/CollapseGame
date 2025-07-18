@@ -1,4 +1,5 @@
-import { _decorator, Component, Node, Label, Sprite, SpriteFrame, resources, Prefab, instantiate } from 'cc';
+import { _decorator, Component, Node, Label, Sprite, SpriteFrame, resources, Prefab, instantiate, assetManager, ImageAsset, Texture2D } from 'cc';
+import { ApiConfig, QueryUserAccountVo, OpTgcfIllustration } from '../API/ApiConfig';
 const { ccclass, property } = _decorator;
 
 /**
@@ -34,7 +35,6 @@ export class TreasureGuideUI extends Component {
         tooltip: "设置玩家当前已获得多少种宝物"
     })
     public obtainedTreasureCount: number = 2; // 默认已获得2种
-
     // 宝物数据
     private treasureList: TreasureInfo[] = [];
     
@@ -44,12 +44,10 @@ export class TreasureGuideUI extends Component {
         '财神印', '金叶子', '金如意', '金算盘', '金葫芦', '金蟾'
     ];
 
-   /**  // 初始时隐藏UI
-    * onLoad() {
-        this.initializeTreasures();
-        this.hide();
+    protected onLoad() {
+        // this.fetchUserAccountInfo(); // Removed as per edit hint
     }
-    */
+
     start() {
         this.generateTreasureList();
     }
@@ -73,21 +71,9 @@ export class TreasureGuideUI extends Component {
         if (this.treasureContainer) {
             this.treasureContainer.removeAllChildren();
         }
-        this.treasureList = [];
-
-        // 生成宝物数据
-        for (let i = 0; i < this.totalTreasureCount; i++) {
-            const treasureInfo: TreasureInfo = {
-                id: i + 1,
-                name: i < this.treasureNames.length ? this.treasureNames[i] : `宝物${i + 1}`,
-                spritePath: i < this.treasureNames.length ? 
-                    `切图/我的/宝物图鉴/${this.treasureNames[i]}` : 
-                    '切图/我的/宝物图鉴/元宝',
-                isObtained: i < this.obtainedTreasureCount
-            };
-            this.treasureList.push(treasureInfo);
-            this.createTreasureItem(treasureInfo);
-        }
+        // Assume treasureList is already populated
+        console.log('Generating treasure list with', this.treasureList.length, 'items');
+        this.treasureList.forEach(info => this.createTreasureItem(info));
     }
 
      //创建宝物UI项
@@ -106,10 +92,36 @@ export class TreasureGuideUI extends Component {
             if (imageNode) {
                 const sprite = imageNode.getComponent(Sprite);
                 if (sprite) {
-                    // 加载对应宝物的 SpriteFrame（资源需放置于 resources 目录下）
-                    resources.load(`${treasureInfo.spritePath}`, SpriteFrame, (err, spriteFrame) => {
-                        if (!err && sprite.isValid) sprite.spriteFrame = spriteFrame;
-                    });
+                    console.log(`Starting to load sprite for ${treasureInfo.name} from ${treasureInfo.spritePath}`);
+                    if (treasureInfo.spritePath.startsWith('http')) {
+                        // Load remote image
+                        assetManager.loadRemote<ImageAsset>(treasureInfo.spritePath, (err, imageAsset) => {
+                            if (!err && imageAsset) {
+                                const texture = new Texture2D();
+                                texture.image = imageAsset;
+                                const spriteFrame = new SpriteFrame();
+                                spriteFrame.texture = texture;
+                                sprite.spriteFrame = spriteFrame;
+                                console.log(`Successfully loaded remote sprite for ${treasureInfo.name}`);
+                            } else {
+                                console.error(`Failed to load remote sprite for ${treasureInfo.name}:`, err);
+                                // 尝试加载默认图片
+                                this.loadDefaultTreasureSprite(sprite, treasureInfo.name);
+                            }
+                        });
+                    } else {
+                        // Load local resource
+                        resources.load(treasureInfo.spritePath, SpriteFrame, (err, spriteFrame) => {
+                            if (!err && spriteFrame) {
+                                sprite.spriteFrame = spriteFrame;
+                                console.log(`Successfully loaded local sprite for ${treasureInfo.name}`);
+                            } else {
+                                console.error(`Failed to load local sprite for ${treasureInfo.name}:`, err);
+                                // 尝试加载默认图片
+                                this.loadDefaultTreasureSprite(sprite, treasureInfo.name);
+                            }
+                        });
+                    }
                 }
             }
             
@@ -120,6 +132,7 @@ export class TreasureGuideUI extends Component {
         }
         
         this.treasureContainer.addChild(treasureNode);
+        console.log(`Added treasure node ${treasureNode.name} to container`);
     }
 
      //设置已获得宝物数量
@@ -139,4 +152,62 @@ export class TreasureGuideUI extends Component {
             console.log(`宝物 ${treasure.name} 已获得！当前已获得数量: ${this.obtainedTreasureCount}`);
         }
     }
-} 
+
+    public updateTreasures(illustrationList: OpTgcfIllustration[]) {
+        console.log('Updating treasures with server data:', illustrationList);
+        
+        // 创建服务器数据映射，使用id作为键
+        const serverMap = new Map<number, OpTgcfIllustration>();
+        illustrationList.forEach(item => serverMap.set(item.id, item));
+
+        this.treasureList = [];
+        
+        // 首先添加服务器返回的已获得宝物
+        illustrationList.forEach((serverItem, index) => {
+            const info: TreasureInfo = {
+                id: serverItem.id,
+                name: serverItem.name,
+                spritePath: serverItem.imgUrl.trim(), // 去除可能的空格
+                isObtained: true
+            };
+            this.treasureList.push(info);
+            console.log(`Added obtained treasure: ${serverItem.name} with image: ${serverItem.imgUrl}`);
+        });
+        
+        // 然后添加未获得的宝物（使用本地预定义名称）
+        const obtainedCount = illustrationList.length;
+        const remainingCount = this.totalTreasureCount - obtainedCount;
+        
+        for (let i = 0; i < remainingCount; i++) {
+            const localIndex = obtainedCount + i;
+            const localName = localIndex < this.treasureNames.length ? 
+                this.treasureNames[localIndex] : `未知宝物${localIndex + 1}`;
+            
+            const info: TreasureInfo = {
+                id: obtainedCount + i + 1,
+                name: localName,
+                spritePath: `切图/我的/宝物图鉴/${localName}`,
+                isObtained: false
+            };
+            this.treasureList.push(info);
+        }
+
+        console.log('Final treasure list:', this.treasureList);
+        this.generateTreasureList();
+    }
+
+    /**
+     * 加载默认宝物图片
+     */
+    private loadDefaultTreasureSprite(sprite: Sprite, treasureName: string) {
+        // 尝试加载通用默认宝物图片
+        resources.load('切图/我的/宝物图鉴/默认宝物', SpriteFrame, (err, spriteFrame) => {
+            if (!err && spriteFrame) {
+                sprite.spriteFrame = spriteFrame;
+                console.log(`Loaded default sprite for ${treasureName}`);
+            } else {
+                console.warn(`Failed to load default sprite for ${treasureName}, keeping current sprite`);
+            }
+        });
+    }
+}

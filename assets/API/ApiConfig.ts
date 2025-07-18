@@ -103,6 +103,26 @@ export interface AjaxResult {
     empty: boolean;
 }
 
+export interface OpTgcfIllustration {
+    id: number;
+    imgUrl: string;
+    name: string;
+    code: string;
+    exp: number;
+    showOrder: number;
+    createTime: string;
+    updateTime: string;
+}
+
+export interface QueryUserAccountVo {
+    nickname: string;
+    avatar: string;
+    expPercent: string;
+    idNo: number;
+    level: number;
+    illustrationList: OpTgcfIllustration[];
+}
+
 /**
  * API配置类
  */
@@ -420,6 +440,7 @@ export class ApiConfig {
         
         // 账户相关
         GET_ACCOUNT_INFO: '/home/getAccountInfo',
+        QUERY_USER_ACCOUNT: '/account/queryUserAccount',
         
         // 游戏相关
         QUERY_GAME_PROGRESS: '/game/queryGameProgress',
