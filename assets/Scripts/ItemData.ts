@@ -1,4 +1,4 @@
-import { _decorator, Component } from 'cc';
+import { _decorator, Component, Node } from 'cc';
 const { ccclass, property } = _decorator;
 
 @ccclass('ItemData')
@@ -61,4 +61,20 @@ export class ItemData extends Component {
     public setItemType(itemType: string): void {
         this.itemType = itemType;
     }
-} 
+    
+    /**
+     * 每帧更新，检查物品位置
+     */
+    update(): void {
+        this.checkPosition();
+    }
+    
+    /**
+     * 检查物品位置，如果y轴位置低于-10000则销毁物品
+     */
+    private checkPosition(): void {
+        if (this.node.position.y < -10000) {
+            this.node.destroy();
+        }
+    }
+}
