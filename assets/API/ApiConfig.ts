@@ -89,8 +89,8 @@ export interface LocalGameProgress {
 export interface LotteryItem {
     id: number;
     isWin: boolean;
-    rewardType: string;
-    rewardNum: number;
+    rewardType: string;  // 'gold' 或 'bag'
+    rewardNum: string;   // 奖励数量，字符串格式
 }
 
 /**
@@ -215,11 +215,10 @@ export interface PrizeDrawRequest extends BaseReq {
  * 返回内容：中奖结果信息
  */
 export interface PrizeDrawResponse {
-    prizeId: number;           // 中奖物品ID
-    rewardType: string;        // 奖励类型
-    rewardNum: number;         // 奖励数量
-    success: boolean;          // 是否抽奖成功
-    remainingDraws: number;    // 剩余抽奖次数
+    id: number;                // 中奖物品ID
+    isWin: boolean;            // 是否中奖
+    rewardType: string;        // 奖励类型 ('gold' 或 'bag')
+    rewardNum: string;         // 奖励数量，字符串格式
 }
 
 /**

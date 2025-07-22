@@ -1,7 +1,13 @@
-import { _decorator, Component, Node, Sprite, SpriteFrame, Button, Label, find, Vec3 } from 'cc';
-import { ApiConfig, LotteryItem, BaseReq, AjaxResult } from '../../API/ApiConfig';
+import { _decorator, Component, Node, Sprite, SpriteFrame, Button, Label, find, Vec3, UITransform } from 'cc';
+import { ApiConfig, LotteryItem, BaseReq, AjaxResult, PrizeDrawResponse } from '../../API/ApiConfig';
 import { GameProgressManager } from '../GameProgressManager';
 const { ccclass, property } = _decorator;
+
+/**
+ * 奖品节点元组结构
+ * [图片节点, 节点框, 节点图片, 节点名字]
+ */
+type PrizeNodeTuple = [Node, Node, Sprite, Label];
 
 @ccclass('LuckyDraw')
 export class LuckyDraw extends Component {
@@ -11,8 +17,17 @@ export class LuckyDraw extends Component {
     @property([Node])
     public claimedNodes: Node[] = [];  // 8个已领取节点
 
+    @property([Node])
+    public prizeImageNodes: Node[] = [];  // 8个奖品图片节点
+
     @property(SpriteFrame)
     public selectedSprite: SpriteFrame = null;  // 选中时要显示的图片
+
+    @property(SpriteFrame)
+    public goldCoinSprite: SpriteFrame = null;  // 金币图片
+
+    @property(SpriteFrame)
+    public redPacketSprite: SpriteFrame = null;  // 红包图片
 
     @property(Node)
     public drawButton: Node = null;  // 抽奖按钮
@@ -43,6 +58,18 @@ export class LuckyDraw extends Component {
         tooltip: '中奖内容文本'
     })
     public prizeContent: Label = null;  // 中奖内容
+
+    @property({
+        type: Sprite,
+        tooltip: '弹窗中奖图片'
+    })
+    public popupPrizeImage: Sprite = null;  // 弹窗中奖图片
+
+    @property({
+        type: Label,
+        tooltip: '弹窗中奖标签'
+    })
+    public popupPrizeLabel: Label = null;  // 弹窗中奖标签
 
     @property({
         type: Label,
@@ -78,12 +105,17 @@ export class LuckyDraw extends Component {
     private availablePrizeIndices: number[] = [];  // 可抽奖的奖品索引数组
     private claimedPrizes: boolean[] = [];  // 记录每个奖品是否已被领取
     private previousClaimed: boolean[] = []; // 记录抽奖前的已领取状态
+    private prizeNodeTuples: PrizeNodeTuple[] = [];  // 奖品节点元组数组
+    private lotteryData: LotteryItem[] = [];  // 抽奖数据
+    private currentDrawData: any = null;  // 当前抽奖结果数据
+    private drawStartTime: number = 0; // 抽奖开始时间
     
     // 公共参数
     public resetTime: number = 0;  // 重置时间戳
 
     // 常量配置
     private readonly MIN_ROTATIONS = 20;  // 最少旋转次数
+    private readonly MIN_DRAW_TIME: number = 2000; // 最少转动时间（毫秒）
 
     onLoad() {
         this.initializeSystem();
@@ -110,6 +142,9 @@ export class LuckyDraw extends Component {
      * 初始化抽奖系统
      */
     private async initializeSystem(): Promise<void> {
+        // 初始化奖品节点元组
+        this.initializePrizeNodeTuples();
+        
         // 保存原始图片
         this.originalSprites = [];
         this.prizeNodes.forEach((node, index) => {
@@ -143,6 +178,34 @@ export class LuckyDraw extends Component {
         if (this.winningBackground) {
             this.winningBackground.active = false;
         }
+    }
+
+    /**
+     * 初始化奖品节点元组
+     */
+    private initializePrizeNodeTuples(): void {
+        this.prizeNodeTuples = [];
+        
+        for (let i = 0; i < this.prizeNodes.length; i++) {
+            const prizeNode = this.prizeNodes[i];
+            const imageNode = this.prizeImageNodes[i];
+            
+            if (prizeNode && imageNode) {
+                const nodeFrame = prizeNode; // 节点框就是奖品节点本身
+                const nodeSprite = imageNode.getComponent(Sprite); // 节点图片
+                const nodeLabel = prizeNode.getComponentInChildren(Label); // 节点名字
+                
+                if (nodeSprite && nodeLabel) {
+                    this.prizeNodeTuples.push([imageNode, nodeFrame, nodeSprite, nodeLabel]);
+                } else {
+                    console.warn(`LuckyDraw: 奖品节点 ${i} 缺少必要组件`);
+                }
+            } else {
+                console.warn(`LuckyDraw: 奖品节点 ${i} 或图片节点未配置`);
+            }
+        }
+        
+        console.log(`LuckyDraw: 初始化了 ${this.prizeNodeTuples.length} 个奖品节点元组`);
     }
 
     private async fetchLotteryData(): Promise<void> {
@@ -201,20 +264,25 @@ export class LuckyDraw extends Component {
             this.availablePrizeIndices = [];
             this.claimedPrizes = new Array(8).fill(false);
             
+            // 保存抽奖数据
+            this.lotteryData = data;
+            
+            // 根据新API结构处理奖品数据
             data.forEach((item, index) => {
-                // Set prize node labels etc.
-                const prizeNode = this.prizeNodes[index];
-                if (prizeNode) {
-                    const label = prizeNode.getComponentInChildren(Label);
-                    if (label) {
-                        label.string = `${item.rewardNum} ${item.rewardType === 'gold' ? '金币' : '红包'}`;
+                // 将API的id转换为数组索引（id从1开始，索引从0开始）
+                const nodeIndex = item.id - 1;
+                if (nodeIndex >= 0 && nodeIndex < 8) {
+                    // 更新奖品节点信息
+                    this.updatePrizeNode(nodeIndex, item);
+                    
+                    if (item.isWin) {
+                        this.claimedPrizes[nodeIndex] = true;
+                        if (this.claimedNodes[nodeIndex]) {
+                            this.claimedNodes[nodeIndex].active = true;
+                        }
+                    } else {
+                        this.availablePrizeIndices.push(nodeIndex);
                     }
-                }
-                if (item.isWin) {
-                    this.claimedPrizes[index] = true;
-                    this.claimedNodes[index].active = true;
-                } else {
-                    this.availablePrizeIndices.push(index);
                 }
             });
             
@@ -385,9 +453,10 @@ export class LuckyDraw extends Component {
         // 设置抽奖状态
         this.isDrawing = true;
         this.rotationCount = 0;
+        this.drawStartTime = Date.now(); // 记录开始时间
         
         try {
-            // 修复：先从服务器获取抽奖结果，再开始动画
+            // 先从服务器获取抽奖结果，再开始动画
             console.log('LuckyDraw: 开始从服务器获取抽奖结果...');
             const prizeResult = await this.drawPrize();
             this.targetIndex = prizeResult.id;
@@ -474,7 +543,9 @@ export class LuckyDraw extends Component {
      * 判断是否应该停止抽奖
      */
     private shouldStop(): boolean {
-        return this.rotationCount >= this.MIN_ROTATIONS && 
+        const elapsedTime = Date.now() - this.drawStartTime;
+        return elapsedTime >= this.MIN_DRAW_TIME && 
+               this.rotationCount >= this.MIN_ROTATIONS && 
                this.currentIndex === this.targetIndex;
     }
 
@@ -566,18 +637,74 @@ export class LuckyDraw extends Component {
     }
 
     /**
+     * 更新奖品节点信息
+     */
+    private updatePrizeNode(index: number, item: LotteryItem): void {
+        if (index >= this.prizeNodeTuples.length) {
+            console.warn(`LuckyDraw: 奖品索引 ${index} 超出范围`);
+            return;
+        }
+        
+        const [imageNode, nodeFrame, nodeSprite, nodeLabel] = this.prizeNodeTuples[index];
+        
+        // 根据新API结构处理奖品类型
+        const isGold = item.rewardType === 'gold';
+        const isBag = item.rewardType === 'bag';
+        const rewardText = isGold ? '金币' : '红包';
+        
+        // 更新标签文本
+        if (nodeLabel) {
+            nodeLabel.string = `${item.rewardNum} ${rewardText}`;
+        }
+        
+        // 根据新API结构的奖励类型更新图片
+        if (nodeSprite) {
+            if (isGold && this.goldCoinSprite) {
+                nodeSprite.spriteFrame = this.goldCoinSprite;
+                nodeSprite.getComponent(UITransform).width = 100;
+                nodeSprite.getComponent(UITransform).height = 68.66;
+            } else if (isBag && this.redPacketSprite) {
+                nodeSprite.spriteFrame = this.redPacketSprite;
+                nodeSprite.getComponent(UITransform).width = 80;
+                nodeSprite.getComponent(UITransform).height = 80;
+            }
+        }
+    }
+
+    /**
      * 设置中奖信息
      */
     private setupWinningInfo(): void {
-        const winningNode = this.prizeNodes[this.targetIndex];
-        if (!winningNode || !this.prizeContent) return;
-
-        // 设置中奖内容文本
-        const winningLabel = winningNode.getComponentInChildren(Label);
-        if (winningLabel) {
-            this.prizeContent.string = winningLabel.string;
-        } else {
-            this.prizeContent.string = winningNode.name;
+        // 使用当前抽奖数据
+        if (!this.currentDrawData) {
+            console.warn('LuckyDraw: 当前抽奖数据为空');
+            return;
+        }
+        
+        const winningItem = this.currentDrawData;
+        
+        // 根据新API结构处理奖品类型
+        const isGold = winningItem.rewardType === 'gold';
+        const isBag = winningItem.rewardType === 'bag';
+        const rewardText = isGold ? '金币' : '红包';
+        
+        // 设置弹窗中奖内容文本
+        if (this.prizeContent) {
+            this.prizeContent.string = `${winningItem.rewardNum} ${rewardText}`;
+        }
+        
+        // 设置弹窗中奖标签
+        if (this.popupPrizeLabel) {
+            this.popupPrizeLabel.string = `恭喜获得 ${winningItem.rewardNum} ${rewardText}`;
+        }
+        
+        // 设置弹窗中奖图片
+        if (this.popupPrizeImage) {
+            if (isGold && this.goldCoinSprite) {
+                this.popupPrizeImage.spriteFrame = this.goldCoinSprite;
+            } else if (isBag && this.redPacketSprite) {
+                this.popupPrizeImage.spriteFrame = this.redPacketSprite;
+            }
         }
     }
 
@@ -716,30 +843,40 @@ export class LuckyDraw extends Component {
                 throw new Error('Draw failed');
             }
             
-            const data: {code: number, msg: string, data: any} = await response.json();
+            const responseData: {code: number, msg: string, data: any} = await response.json();
             
             // 输出响应信息
             console.log('=== 网络响应 - 抽奖 ===');
             console.log('响应状态:', response.status);
-            console.log('响应数据:', data);
+            console.log('响应数据:', responseData);
             
             // 检查API响应状态：code为200表示成功
-            if (data.code !== 200) {
-                throw new Error(`Draw failed: ${data.msg || 'Unknown error'}`);
+            if (responseData.code !== 200) {
+                throw new Error(`Draw failed: ${responseData.msg || 'Unknown error'}`);
             }
             
             console.log('LuckyDraw: 抽奖成功，获取中奖结果');
             
-            // 修复：不在这里立即更新状态，只获取中奖信息用于动画
-            // 从API响应中获取中奖的奖品ID
-            const prizeId = data.data?.prizeId || 1; // 假设API返回prizeId字段
+            // 处理服务器返回的数据：data直接是中奖ID数字
+            const prizeId: number = responseData.data;
+            console.log('LuckyDraw: 服务器返回中奖数据:', prizeId);
             
-            // 将prizeId转换为数组索引（prizeId通常从1开始，数组索引从0开始）
+            // 根据中奖ID从抽奖数据中找到对应的奖品信息
+            const prizeData = this.lotteryData.find(item => item.id === prizeId);
+            if (!prizeData) {
+                console.warn('LuckyDraw: 未找到对应的奖品数据，ID:', prizeId);
+                throw new Error('Invalid prize data');
+            }
+            
+            // 保存当前抽奖的完整数据，用于显示中奖信息
+            this.currentDrawData = prizeData;
+            
+            // 将API的id转换为数组索引（id从1开始，索引从0开始）
             const wonIndex = prizeId - 1;
             
-            console.log(`LuckyDraw: 服务器返回中奖ID: ${prizeId}, 对应索引: ${wonIndex}`);
+            console.log(`LuckyDraw: 转换后的中奖索引: ${wonIndex}`);
             
-            // 验证索引有效性
+            // 验证索引有效性（转换后的索引应该是0-7）
             if (wonIndex >= 0 && wonIndex < this.prizeNodes.length) {
                 return {id: wonIndex};
             } else {
