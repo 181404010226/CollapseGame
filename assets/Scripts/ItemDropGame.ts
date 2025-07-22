@@ -138,6 +138,15 @@ export class ItemDropGame extends Component {
         // 使用统一的数据恢复方法
         this.scheduleOnce(() => {
             this.unifiedDataRestore();
+            
+            // 启动时获取下次抽奖层数
+            if (this.progressManager) {
+                this.progressManager.getNextLotteryLayer().then((nextLayer) => {
+                    log(`ItemDropGame: 启动时获取下次抽奖层数成功: ${nextLayer}`);
+                }).catch((error) => {
+                    warn('ItemDropGame: 启动时获取下次抽奖层数失败:', error);
+                });
+            }
         }, 0.1);
         
         this.generateNextPreviewItem();
@@ -671,6 +680,19 @@ export class ItemDropGame extends Component {
         
         // 记录合成奖励到进度管理器
         this.progressManager?.recordComposeReward(goldReward, redBagReward, isMaxLevel);
+        
+        // 检查并增加抽奖次数（当合成对应等级物品时）
+        if (this.progressManager) {
+            this.progressManager.checkAndAddLottery(newLevel).then((added) => {
+                if (added) {
+                    log(`ItemDropGame: 合成等级 ${newLevel} 物品，成功增加抽奖次数`);
+                } else {
+                    log(`ItemDropGame: 合成等级 ${newLevel} 物品，未增加抽奖次数`);
+                }
+            }).catch((error) => {
+                warn('ItemDropGame: 检查抽奖次数失败:', error);
+            });
+        }
         
         // 计算合成位置
         const pos1 = item1.getWorldPosition();

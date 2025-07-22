@@ -71,6 +71,9 @@ export interface LocalGameProgress {
     // 合成统计
     times: number;             // 合成次数
     
+    // 抽奖相关
+    nextLotteryLayer: number;  // 下次抽奖次数下发层数
+    
     // 场景数据
     localSceneData: GameSceneData | null;   // 本地场景数据
     serverSceneData: GameSceneData | null;  // 服务器场景数据
@@ -80,6 +83,9 @@ export interface LocalGameProgress {
     lastLocalSaveTime: number;   // 上次本地保存时间
 }
 
+/**
+ * 抽奖物品数据结构
+ */
 export interface LotteryItem {
     id: number;
     isWin: boolean;
@@ -87,19 +93,167 @@ export interface LotteryItem {
     rewardNum: number;
 }
 
+/**
+ * 基础请求参数
+ * 输入内容：所有API请求的基础字段
+ */
 export interface BaseReq {
-    androidId: string;
-    deviceId: string;
-    requestId: string;
-    timeStamp: number;
-    packageName?: string;
+    androidId: string;      // 安卓设备ID
+    deviceId: string;       // 设备唯一标识
+    requestId: string;      // 请求唯一标识
+    timeStamp: number;      // 请求时间戳
+    packageName?: string;   // 应用包名
 }
 
+/**
+ * Ajax请求结果基础结构
+ * 返回内容：通用的响应状态标识
+ */
 export interface AjaxResult {
-    error: boolean;
-    success: boolean;
-    warn: boolean;
-    empty: boolean;
+    error: boolean;   // 是否有错误
+    success: boolean; // 是否成功
+    warn: boolean;    // 是否有警告
+    empty: boolean;   // 是否为空结果
+}
+
+/**
+ * 微信登录请求参数
+ * 输入内容：微信授权码和设备信息
+ */
+export interface WeChatLoginRequest extends BaseReq {
+    code: string;           // 微信授权码
+    encryptedData?: string; // 加密数据
+    iv?: string;           // 初始向量
+}
+
+/**
+ * 微信登录响应数据
+ * 返回内容：用户信息和访问令牌
+ */
+export interface WeChatLoginResponse {
+    access_token: string;   // 访问令牌
+    expire_in: number;      // 过期时间
+    openid: string;         // 用户openid
+    nickname?: string;      // 用户昵称
+    avatar?: string;        // 用户头像
+}
+
+/**
+ * 游戏进度查询请求参数
+ * 输入内容：用户身份验证信息
+ */
+export interface QueryGameProgressRequest {
+    // 通过Authorization header传递token，无需额外参数
+}
+
+/**
+ * 游戏进度查询响应数据
+ * 返回内容：完整的游戏进度信息
+ */
+export interface QueryGameProgressResponse {
+    goldNum: number;           // 总金币数
+    goldNumCompose: number;    // 合成金币数
+    redBagNum: number;         // 总红包数
+    redBagNumCompose: number;  // 合成红包数
+    wealthNum: number;         // 财神数
+    exp: number;               // 经验值
+    level: number;             // 等级
+    drawNum: number;           // 抽奖次数
+    progress: string;          // 游戏进度JSON字符串
+    nextLotteryLayer: number;  // 下次抽奖层数
+}
+
+/**
+ * 游戏进度保存请求参数
+ * 输入内容：完整的游戏进度数据
+ */
+export interface SaveGameProgressRequest extends BaseReq {
+    goldNumCompose: number;    // 合成金币数
+    redBagNumCompose: number;  // 合成红包数
+    wealthNum: number;         // 财神数
+    times: number;             // 合成次数
+    progress: string;          // 游戏进度JSON字符串
+}
+
+/**
+ * 游戏进度保存响应数据
+ * 返回内容：保存操作结果
+ */
+export interface SaveGameProgressResponse {
+    success: boolean;          // 是否保存成功
+    message?: string;          // 响应消息
+}
+
+/**
+ * 抽奖数据查询请求参数
+ * 输入内容：用户身份验证信息
+ */
+export interface LotteryDataRequest {
+    // 通过Authorization header传递token，无需额外参数
+}
+
+/**
+ * 抽奖数据查询响应数据
+ * 返回内容：抽奖详情和剩余次数
+ */
+export interface LotteryDataResponse {
+    detail: LotteryItem[];     // 抽奖物品详情数组
+    count: number;             // 剩余抽奖次数
+    resetTime?: number;        // 重置时间戳
+}
+
+/**
+ * 抽奖请求参数
+ * 输入内容：设备信息和基础请求参数
+ */
+export interface PrizeDrawRequest extends BaseReq {
+    // 继承BaseReq的所有字段
+}
+
+/**
+ * 抽奖响应数据
+ * 返回内容：中奖结果信息
+ */
+export interface PrizeDrawResponse {
+    prizeId: number;           // 中奖物品ID
+    rewardType: string;        // 奖励类型
+    rewardNum: number;         // 奖励数量
+    success: boolean;          // 是否抽奖成功
+    remainingDraws: number;    // 剩余抽奖次数
+}
+
+/**
+ * 获取下次抽奖层数请求参数
+ * 输入内容：无需额外参数，通过Authorization header传递token
+ */
+export interface GetNextLotteryLayerRequest {
+    // 无需额外参数，使用BaseReq的基础字段
+}
+
+/**
+ * 获取下次抽奖层数响应数据结构
+ * 返回内容：包含下次抽奖层数信息
+ */
+export interface GetNextLotteryLayerResponse {
+    nextLayer: number;  // 下次抽奖层数
+}
+
+/**
+ * 增加抽奖次数请求参数
+ * 输入内容：设备信息和基础请求参数
+ */
+export interface AddLotteryRequest extends BaseReq {
+    // 继承BaseReq的所有字段：androidId, deviceId, requestId, timeStamp, packageName
+}
+
+/**
+ * 增加抽奖次数响应数据结构
+ * 返回内容：更新后的抽奖次数和操作结果
+ */
+export interface AddLotteryResponse {
+    drawNum: number;    // 更新后的抽奖次数
+    success: boolean;   // 是否成功
+    resetTime?: number; // 重置时间戳（可选）
 }
 
 export interface OpTgcfIllustration {
@@ -227,6 +381,7 @@ export class ApiConfig {
             drawNum: 0,
             progress: '',
             times: 0,
+            nextLotteryLayer: 1,
             localSceneData: null,
             serverSceneData: null,
             lastServerSyncTime: 0,
@@ -304,6 +459,7 @@ export class ApiConfig {
             this.LOCAL_GAME_PROGRESS.level = serverData.level || 1;
             this.LOCAL_GAME_PROGRESS.drawNum = serverData.drawNum || 0;
             this.LOCAL_GAME_PROGRESS.progress = serverData.progress || '';
+            this.LOCAL_GAME_PROGRESS.nextLotteryLayer = serverData.nextLotteryLayer || 1;
             
             // 解析服务器场景数据
             if (serverData.progress) {
@@ -446,6 +602,8 @@ export class ApiConfig {
         SAVE_GAME_PROGRESS: '/game/saveGameProgress',
         LOTTERY: '/game/lottery',
         PRIZE: '/game/prize',
+        GET_NEXT_LOTTERY_LAYER: '/game/getNextLotteryLayer',
+        ADD_LOTTERY: '/game/addLottery',
         
         // 其他端点...
     };
@@ -603,5 +761,30 @@ export class ApiConfig {
      */
     public static getAvailableEnvironments(): string[] {
         return Object.keys(this.ENVIRONMENTS);
+    }
+
+    /**
+     * 获取默认设备信息
+     * 提供基础的设备信息，避免依赖DeviceInfoCollector组件
+     */
+    public static getDefaultDeviceInfo(): { androidId: string; deviceId: string } {
+        return {
+            androidId: this.generateMockAndroidId(),
+            deviceId: '13974751124' // 使用固定的设备ID，与其他地方保持一致
+        };
+    }
+
+    /**
+     * 生成模拟的Android ID
+     * 用于在无法获取真实设备信息时提供默认值
+     */
+    private static generateMockAndroidId(): string {
+        // 生成16位随机字符串作为模拟Android ID
+        const chars = '0123456789abcdef';
+        let result = '';
+        for (let i = 0; i < 16; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
     }
 }

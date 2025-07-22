@@ -1,7 +1,6 @@
 import { _decorator, Component, Node, Sprite, SpriteFrame, Button, Label, find, Vec3 } from 'cc';
 import { ApiConfig, LotteryItem, BaseReq, AjaxResult } from '../../API/ApiConfig';
 import { GameProgressManager } from '../GameProgressManager';
-import { DeviceInfoCollector } from '../../API/DeviceInfoCollector';
 const { ccclass, property } = _decorator;
 
 @ccclass('LuckyDraw')
@@ -46,6 +45,12 @@ export class LuckyDraw extends Component {
     public prizeContent: Label = null;  // 中奖内容
 
     @property({
+        type: Label,
+        tooltip: '重置倒计时显示'
+    })
+    public resetCountdownLabel: Label = null;  // 重置倒计时显示
+
+    @property({
         type: Button,
         tooltip: '确认按钮'
     })
@@ -73,6 +78,9 @@ export class LuckyDraw extends Component {
     private availablePrizeIndices: number[] = [];  // 可抽奖的奖品索引数组
     private claimedPrizes: boolean[] = [];  // 记录每个奖品是否已被领取
     private previousClaimed: boolean[] = []; // 记录抽奖前的已领取状态
+    
+    // 公共参数
+    public resetTime: number = 0;  // 重置时间戳
 
     // 常量配置
     private readonly MIN_ROTATIONS = 20;  // 最少旋转次数
@@ -83,7 +91,19 @@ export class LuckyDraw extends Component {
 
     start() {
         this.setupEventListeners();
-        this.updateUI();
+        
+        // 检查是否需要重置抽奖状态
+        if (this.shouldReset()) {
+            this.resetLotteryState();
+        }
+        
+        // 获取抽奖数据并更新UI
+        this.fetchLotteryData().then(() => {
+            this.updateUI();
+        }).catch(error => {
+            console.error('LuckyDraw: 获取抽奖数据失败:', error);
+            this.updateUI(); // 即使失败也要更新UI
+        });
     }
 
     /**
@@ -131,8 +151,12 @@ export class LuckyDraw extends Component {
             const token = ApiConfig.getUserData()?.access_token;
             if (!token) throw new Error('No token');
             
-            console.log('Fetching lottery data from:', url);
-            console.log('Headers:', { Authorization: `Bearer ${token}` });
+            // 输出请求信息
+            console.log('=== 网络请求 - 获取抽奖数据 ===');
+            console.log('请求URL:', url);
+            console.log('请求方法: GET');
+            console.log('请求头:', { Authorization: `Bearer ${token}` });
+            console.log('请求体: 无');
 
             const response = await fetch(url, {
                 method: 'GET',
@@ -141,14 +165,33 @@ export class LuckyDraw extends Component {
                 }
             });
             
-            if (!response.ok) throw new Error('Fetch failed');
+            if (!response.ok) {
+                console.log('=== 网络响应错误 - 获取抽奖数据 ===');
+                console.log('HTTP状态码:', response.status);
+                throw new Error('Fetch failed');
+            }
             
             const rawData = await response.json();
-            console.log('Received lottery data:', rawData);
+            
+            // 输出响应信息
+            console.log('=== 网络响应 - 获取抽奖数据 ===');
+            console.log('响应状态:', response.status);
+            console.log('响应数据:', rawData);
+            
             if (rawData.code !== 200) throw new Error('API error: ' + rawData.msg);
+            
             const prizes = rawData.data.detail;
             console.log('Prize details:', JSON.stringify(prizes));
+            
+            // 更新剩余抽奖次数
             this.remainingDraws = rawData.data.count;
+            
+            // 更新重置时间
+            if (rawData.data.resetTime) {
+                this.resetTime = rawData.data.resetTime;
+                console.log('Updated resetTime:', this.resetTime);
+            }
+            
             let data: LotteryItem[] = Array.isArray(prizes) ? prizes : [prizes];
             if (data.length !== 8) {
                 console.warn('Unexpected number of prizes:', data.length);
@@ -175,7 +218,8 @@ export class LuckyDraw extends Component {
                 }
             });
             
-            // this.remainingDraws = this.availablePrizeIndices.length; // Or fetch from server if separate
+            // 更新UI显示
+            this.updateUI();
             
         } catch (error) {
             console.error('Failed to fetch lottery data:', error);
@@ -198,6 +242,89 @@ export class LuckyDraw extends Component {
     }
 
     /**
+     * 获取重置时间
+     * @returns 重置时间戳
+     */
+    public getResetTime(): number {
+        return this.resetTime;
+    }
+
+    /**
+     * 设置重置时间
+     * @param resetTime 重置时间戳
+     */
+    public setResetTime(resetTime: number): void {
+        this.resetTime = resetTime;
+        console.log('LuckyDraw: 重置时间已更新为:', resetTime);
+    }
+
+    /**
+     * 检查是否需要重置抽奖状态
+     * @returns 是否需要重置
+     */
+    public shouldReset(): boolean {
+        if (this.resetTime <= 0) {
+            return false;
+        }
+        const currentTime = Date.now();
+        return currentTime >= this.resetTime;
+    }
+
+    /**
+     * 重置抽奖状态
+     */
+    public resetLotteryState(): void {
+        console.log('LuckyDraw: 重置抽奖状态');
+        
+        // 重置已领取状态
+        this.claimedPrizes = new Array(this.prizeNodes.length).fill(false);
+        
+        // 隐藏所有已领取节点
+        this.claimedNodes.forEach(node => {
+            if (node) {
+                node.active = false;
+            }
+        });
+        
+        // 重置可用奖品索引
+        this.availablePrizeIndices = [];
+        for (let i = 0; i < this.prizeNodes.length; i++) {
+            this.availablePrizeIndices.push(i);
+        }
+        
+        // 重置重置时间
+        this.resetTime = 0;
+        
+        // 更新UI
+        this.updateUI();
+    }
+
+    /**
+     * 更新重置倒计时显示
+     */
+    private updateResetCountdown(): void {
+        if (!this.resetCountdownLabel) {
+            return;
+        }
+
+        if (this.resetTime <= 0) {
+            this.resetCountdownLabel.string = '';
+            return;
+        }
+
+        // 修复：直接使用服务器返回的resetTime作为小时数，不需要计算时间差
+        // 服务器返回的resetTime就是剩余小时数
+        const remainingHours = this.resetTime;
+        
+        if (remainingHours <= 0) {
+            this.resetCountdownLabel.string = '可重置';
+            return;
+        }
+
+        this.resetCountdownLabel.string = `${remainingHours}小时后重置`;
+    }
+
+    /**
      * 更新UI显示
      */
     private updateUI(): void {
@@ -209,6 +336,9 @@ export class LuckyDraw extends Component {
         if (this.extraRemainingLabel) {
             this.extraRemainingLabel.string = `剩余${this.remainingDraws}次`;
         }
+
+        // 更新重置倒计时
+        this.updateResetCountdown();
 
         // 更新按钮内的次数显示
         if (this.drawButton) {
@@ -254,18 +384,31 @@ export class LuckyDraw extends Component {
         
         // 设置抽奖状态
         this.isDrawing = true;
-        this.remainingDraws--;
         this.rotationCount = 0;
         
-        // Instead of random, call prize API
-        const prizeResult = await this.drawPrize();
-        this.targetIndex = prizeResult.id; // Assume returns the won item id/index
-        
-        // 更新UI
-        this.updateUI();
-        
-        // 开始循环动画
-        this.schedule(this.rotateToNext, this.rotateSpeed);
+        try {
+            // 修复：先从服务器获取抽奖结果，再开始动画
+            console.log('LuckyDraw: 开始从服务器获取抽奖结果...');
+            const prizeResult = await this.drawPrize();
+            this.targetIndex = prizeResult.id;
+            
+            console.log(`LuckyDraw: 服务器返回中奖索引: ${this.targetIndex}`);
+            
+            // 减少剩余次数（在获取到服务器结果后）
+            this.remainingDraws--;
+            
+            // 更新UI
+            this.updateUI();
+            
+            // 开始循环动画
+            this.schedule(this.rotateToNext, this.rotateSpeed);
+            
+        } catch (error) {
+            console.error('LuckyDraw: 获取抽奖结果失败:', error);
+            // 恢复状态
+            this.isDrawing = false;
+            this.updateUI();
+        }
     }
 
     /**
@@ -343,37 +486,64 @@ export class LuckyDraw extends Component {
         this.unschedule(this.rotateToNext);
         this.isDrawing = false;
         
-        // 处理中奖奖品
-        this.handlePrizeWon();
-        
-        // 更新UI
-        this.updateUI();
-        
-        // 显示中奖弹窗
-        this.showWinningPopup();
+        // 延迟处理中奖结果，让动画效果更好
+        this.scheduleOnce(() => {
+            // 修复：先显示中奖弹窗，再更新已领取状态
+            // 显示中奖弹窗
+            this.showWinningPopup();
+        }, 0.5); // 延迟0.5秒，让用户看清最终停止位置
     }
 
     /**
      * 处理中奖奖品的逻辑
      */
-    private handlePrizeWon(): void {
-        // 标记奖品为已领取
-        this.claimedPrizes[this.targetIndex] = true;
-        
-        // 显示对应的已领取节点
-        if (this.claimedNodes[this.targetIndex]) {
-            this.claimedNodes[this.targetIndex].active = true;
-        }
-        
-        // 从可抽奖列表中移除该奖品
-        const indexToRemove = this.availablePrizeIndices.indexOf(this.targetIndex);
-        if (indexToRemove > -1) {
-            this.availablePrizeIndices.splice(indexToRemove, 1);
-        }
-        
-        // 如果当前索引被移除了，重置到第一个可用位置
-        if (this.availablePrizeIndices.length > 0) {
-            this.currentIndex = this.availablePrizeIndices[0];
+    private async handlePrizeWon(): Promise<void> {
+        try {
+            // 修复：在用户确认后同步服务器数据并更新UI状态
+            console.log('LuckyDraw: 开始同步服务器数据...');
+            
+            // 重新获取抽奖数据以更新状态
+            await this.fetchLotteryData();
+            
+            // 同步用户进度信息
+            const manager = find('GameProgressManager')?.getComponent(GameProgressManager);
+            if (manager) {
+                try {
+                    await manager.loadServerProgress();
+                    console.log('LuckyDraw: 用户信息同步成功');
+                } catch (syncError) {
+                    console.warn('LuckyDraw: 用户信息同步失败:', syncError);
+                }
+            } else {
+                console.warn('LuckyDraw: 未找到GameProgressManager，无法同步用户信息');
+            }
+            
+            console.log('LuckyDraw: 服务器数据同步完成');
+            
+        } catch (error) {
+            console.error('LuckyDraw: 同步服务器数据失败:', error);
+            
+            // 如果同步失败，使用本地逻辑更新状态
+            console.log('LuckyDraw: 使用本地逻辑更新中奖状态');
+            
+            // 标记奖品为已领取
+            this.claimedPrizes[this.targetIndex] = true;
+            
+            // 显示对应的已领取节点
+            if (this.claimedNodes[this.targetIndex]) {
+                this.claimedNodes[this.targetIndex].active = true;
+            }
+            
+            // 从可抽奖列表中移除该奖品
+            const indexToRemove = this.availablePrizeIndices.indexOf(this.targetIndex);
+            if (indexToRemove > -1) {
+                this.availablePrizeIndices.splice(indexToRemove, 1);
+            }
+            
+            // 如果当前索引被移除了，重置到第一个可用位置
+            if (this.availablePrizeIndices.length > 0) {
+                this.currentIndex = this.availablePrizeIndices[0];
+            }
         }
     }
 
@@ -414,8 +584,20 @@ export class LuckyDraw extends Component {
     /**
      * 确认按钮点击事件
      */
-    private onConfirmButtonClick(): void {
-        this.hideWinningPopup();
+    private async onConfirmButtonClick(): Promise<void> {
+        try {
+            // 修复：在用户确认后才更新已领取状态
+            await this.handlePrizeWon();
+            
+            // 更新UI
+            this.updateUI();
+            
+        } catch (error) {
+            console.error('LuckyDraw: 处理中奖确认失败:', error);
+        } finally {
+            // 无论成功失败都隐藏弹窗
+            this.hideWinningPopup();
+        }
     }
 
     /**
@@ -498,9 +680,11 @@ export class LuckyDraw extends Component {
             const token = ApiConfig.getUserData()?.access_token;
             if (!token) throw new Error('No token');
             
-            const deviceInfoCollector = find('DeviceInfoCollector')?.getComponent(DeviceInfoCollector);
-            if (!deviceInfoCollector) throw new Error('No DeviceInfoCollector');
-            const deviceInfo = await deviceInfoCollector.collectDeviceInfo();
+            // 从ApiConfig获取设备信息，避免依赖DeviceInfoCollector组件
+            const deviceInfo = ApiConfig.getDefaultDeviceInfo();
+            
+            // 保存抽奖前的已领取状态
+            this.previousClaimed = [...this.claimedPrizes];
             
             const req: BaseReq = {
                 androidId: deviceInfo.androidId || '',
@@ -509,6 +693,13 @@ export class LuckyDraw extends Component {
                 timeStamp: Date.now(),
                 packageName: ApiConfig.getPackageName()
             };
+            
+            // 输出请求信息
+            console.log('=== 网络请求 - 抽奖 ===');
+            console.log('请求URL:', url);
+            console.log('请求方法: POST');
+            console.log('请求头:', { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` });
+            console.log('请求体:', req);
             
             const response = await fetch(url, {
                 method: 'POST',
@@ -519,35 +710,46 @@ export class LuckyDraw extends Component {
                 body: JSON.stringify(req)
             });
             
-            if (!response.ok) throw new Error('Draw failed');
-            
-            const data: AjaxResult = await response.json();
-            if (!data.success) throw new Error('Draw not successful');
-            
-            // After success, refetch lottery to find the new won prize
-            await this.fetchLotteryData();  // This will update claimed etc.
-            
-            // Sync progress.const manager = this.getComponent(GameProgressManager) || find('GameProgressManager')?.getComponent(GameProgressManager);
-            const manager = find('GameProgressManager')?.getComponent(GameProgressManager);
-            if (manager) {
-                await manager.loadServerProgress();
+            if (!response.ok) {
+                console.log('=== 网络响应错误 - 抽奖 ===');
+                console.log('HTTP状态码:', response.status);
+                throw new Error('Draw failed');
             }
-
-            // Find the newly won prize (compare previous claimed)
-            // For simplicity, assume we can find it, or modify to return from server if possible
-            // Placeholder: find the one that became true
-            let newWonIndex = -1;
-            for (let i = 0; i < this.claimedPrizes.length; i++) {
-                if (this.claimedPrizes[i] && !this.previousClaimed[i]) {  // Need to store previous
-                    newWonIndex = i;
-                    break;
-                }
+            
+            const data: {code: number, msg: string, data: any} = await response.json();
+            
+            // 输出响应信息
+            console.log('=== 网络响应 - 抽奖 ===');
+            console.log('响应状态:', response.status);
+            console.log('响应数据:', data);
+            
+            // 检查API响应状态：code为200表示成功
+            if (data.code !== 200) {
+                throw new Error(`Draw failed: ${data.msg || 'Unknown error'}`);
             }
-            return {id: newWonIndex};
+            
+            console.log('LuckyDraw: 抽奖成功，获取中奖结果');
+            
+            // 修复：不在这里立即更新状态，只获取中奖信息用于动画
+            // 从API响应中获取中奖的奖品ID
+            const prizeId = data.data?.prizeId || 1; // 假设API返回prizeId字段
+            
+            // 将prizeId转换为数组索引（prizeId通常从1开始，数组索引从0开始）
+            const wonIndex = prizeId - 1;
+            
+            console.log(`LuckyDraw: 服务器返回中奖ID: ${prizeId}, 对应索引: ${wonIndex}`);
+            
+            // 验证索引有效性
+            if (wonIndex >= 0 && wonIndex < this.prizeNodes.length) {
+                return {id: wonIndex};
+            } else {
+                console.warn(`LuckyDraw: 中奖索引 ${wonIndex} 无效，使用第一个可用奖品`);
+                return {id: this.availablePrizeIndices.length > 0 ? this.availablePrizeIndices[0] : 0};
+            }
             
         } catch (error) {
-            console.error('Failed to draw prize:', error);
+            console.error('LuckyDraw: 抽奖失败:', error);
             throw error;
         }
     }
-} 
+}

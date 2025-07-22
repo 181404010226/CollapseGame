@@ -1,6 +1,7 @@
-import { _decorator, Component, Label, log, warn, director } from 'cc';
-import { ApiConfig, LocalGameProgress, GameSceneData } from '../API/ApiConfig';
+import { _decorator, Component, Label, log, warn, director, find } from 'cc';
+import { ApiConfig, LocalGameProgress, GameSceneData, BaseReq, AjaxResult, GetNextLotteryLayerResponse, AddLotteryResponse } from '../API/ApiConfig';
 import { DeviceInfoCollector } from '../API/DeviceInfoCollector';
+import { LuckyDrawButton } from './按钮显现隐藏/LuckyDrawButton';
 
 const { ccclass, property } = _decorator;
 
@@ -94,6 +95,9 @@ export class GameProgressManager extends Component {
 
     @property({ type: Label, tooltip: '剩余抽奖次数 Label' })
     drawNumLabel: Label = null;
+
+    @property({ type: LuckyDrawButton, tooltip: '抽奖按钮组件引用' })
+    luckyDrawButton: LuckyDrawButton = null;
 
     // ======== 配置属性 ========
     @property({
@@ -540,6 +544,13 @@ export class GameProgressManager extends Component {
         const url = ApiConfig.getFullUrl(this.QUERY_ENDPOINT);
         const timeout = ApiConfig.getTimeout();
 
+        // 输出请求信息
+        console.log('=== 网络请求 - 查询游戏进度 ===');
+        console.log('请求URL:', url);
+        console.log('请求方法: GET');
+        console.log('请求头:', { Authorization: 'Bearer ' + token });
+        console.log('请求体: 无');
+
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             xhr.timeout = timeout;
@@ -549,6 +560,11 @@ export class GameProgressManager extends Component {
                     if (xhr.status === 200) {
                         try {
                             const response: QueryGameProgressResponse = JSON.parse(xhr.responseText);
+                            
+                            // 输出响应信息
+                            console.log('=== 网络响应 - 查询游戏进度 ===');
+                            console.log('响应状态:', xhr.status);
+                            console.log('响应数据:', response);
                             
                             if (response.success) {
                                 resolve(response.data ?? null);
@@ -564,16 +580,28 @@ export class GameProgressManager extends Component {
                                 }
                             }
                         } catch (parseErr) {
+                            console.log('=== 网络响应解析错误 - 查询游戏进度 ===');
+                            console.log('原始响应:', xhr.responseText);
+                            console.log('解析错误:', parseErr);
                             reject(new Error('响应解析失败: ' + parseErr));
                         }
                     } else {
+                        console.log('=== 网络响应错误 - 查询游戏进度 ===');
+                        console.log('HTTP状态码:', xhr.status);
+                        console.log('响应文本:', xhr.responseText);
                         reject(new Error(`HTTP错误: ${xhr.status} ${xhr.statusText}`));
                     }
                 }
             };
 
-            xhr.onerror = () => reject(new Error('网络请求失败'));
-            xhr.ontimeout = () => reject(new Error(`请求超时 (${timeout}ms)`));
+            xhr.onerror = () => {
+                console.log('=== 网络错误 - 查询游戏进度 ===');
+                reject(new Error('网络请求失败'));
+            };
+            xhr.ontimeout = () => {
+                console.log('=== 网络超时 - 查询游戏进度 ===');
+                reject(new Error(`请求超时 (${timeout}ms)`));
+            };
 
             xhr.open('GET', url, true);
             xhr.setRequestHeader('Authorization', 'Bearer ' + token);
@@ -658,6 +686,13 @@ export class GameProgressManager extends Component {
         const url = ApiConfig.getFullUrl(this.SAVE_ENDPOINT);
         const timeout = ApiConfig.getTimeout();
 
+        // 输出请求信息
+        console.log('=== 网络请求 - 保存游戏进度 ===');
+        console.log('请求URL:', url);
+        console.log('请求方法: POST');
+        console.log('请求头:', { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' });
+        console.log('请求体:', dto);
+
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             xhr.timeout = timeout;
@@ -668,6 +703,11 @@ export class GameProgressManager extends Component {
                         try {
                             const response: ApiResponse<SaveGameProgressVo> = JSON.parse(xhr.responseText);
                             
+                            // 输出响应信息
+                            console.log('=== 网络响应 - 保存游戏进度 ===');
+                            console.log('响应状态:', xhr.status);
+                            console.log('响应数据:', response);
+                            
                             if (ApiConfig.isResponseSuccess(response.code)) {
                                 // 更新服务器返回的数据
                                 ApiConfig.updateServerProgress(response.data);
@@ -676,16 +716,28 @@ export class GameProgressManager extends Component {
                                 reject(new Error(response.msg || '保存游戏进度失败'));
                             }
                         } catch (parseErr) {
+                            console.log('=== 网络响应解析错误 - 保存游戏进度 ===');
+                            console.log('原始响应:', xhr.responseText);
+                            console.log('解析错误:', parseErr);
                             reject(new Error('响应解析失败: ' + parseErr));
                         }
                     } else {
+                        console.log('=== 网络响应错误 - 保存游戏进度 ===');
+                        console.log('HTTP状态码:', xhr.status);
+                        console.log('响应文本:', xhr.responseText);
                         reject(new Error(`HTTP错误: ${xhr.status} ${xhr.statusText}`));
                     }
                 }
             };
 
-            xhr.onerror = () => reject(new Error('网络请求失败'));
-            xhr.ontimeout = () => reject(new Error(`请求超时 (${timeout}ms)`));
+            xhr.onerror = () => {
+                console.log('=== 网络错误 - 保存游戏进度 ===');
+                reject(new Error('网络请求失败'));
+            };
+            xhr.ontimeout = () => {
+                console.log('=== 网络超时 - 保存游戏进度 ===');
+                reject(new Error(`请求超时 (${timeout}ms)`));
+            };
 
             xhr.open('POST', url, true);
             xhr.setRequestHeader('Authorization', 'Bearer ' + token);
@@ -934,8 +986,278 @@ export class GameProgressManager extends Component {
         return JSON.stringify(progressData);
     }
 
+    // ======== 抽奖相关方法 ========
+    
+    /**
+     * 获取下次抽奖层数
+     */
+    public async getNextLotteryLayer(): Promise<number> {
+        try {
+            const token = ApiConfig.getUserData()?.access_token;
+            if (!token) {
+                throw new Error('用户未登录');
+            }
+
+            const url = ApiConfig.getFullUrl(ApiConfig.ENDPOINTS.GET_NEXT_LOTTERY_LAYER);
+            const timeout = ApiConfig.getTimeout();
+
+            // 输出请求信息
+            console.log('=== 网络请求 - 获取下次抽奖层数 ===');
+            console.log('请求URL:', url);
+            console.log('请求方法: GET');
+            console.log('请求头:', { Authorization: `Bearer ${token}` });
+            console.log('请求体: 无');
+
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.timeout = timeout;
+
+                xhr.onreadystatechange = () => {
+                    if (xhr.readyState === 4) {
+                        if (xhr.status === 200) {
+                            try {
+                                const response: { code: number; msg: string; data: GetNextLotteryLayerResponse } = JSON.parse(xhr.responseText);
+                                
+                                // 输出响应信息
+                                console.log('=== 网络响应 - 获取下次抽奖层数 ===');
+                                console.log('响应状态:', xhr.status);
+                                console.log('响应数据:', response);
+                                
+                                if (response.code === 200 && response.data) {
+                                    // 修复：直接使用服务器返回的data值，而不是data.nextLayer
+                                    const nextLayer = typeof response.data === 'number' ? response.data : (response.data.nextLayer || 1);
+                                    
+                                    log(`GameProgressManager: 获取下次抽奖层数成功: ${nextLayer}`);
+                                    resolve(nextLayer);
+                                } else {
+                                    const message = response.msg || '获取下次抽奖层数失败';
+                                    warn('GameProgressManager: 获取下次抽奖层数失败:', message);
+                                    reject(new Error(message));
+                                }
+                            } catch (parseError) {
+                                console.log('=== 网络响应解析错误 - 获取下次抽奖层数 ===');
+                                console.log('原始响应:', xhr.responseText);
+                                console.log('解析错误:', parseError);
+                                warn('GameProgressManager: 解析获取下次抽奖层数响应失败:', parseError);
+                                reject(parseError);
+                            }
+                        } else {
+                            console.log('=== 网络响应错误 - 获取下次抽奖层数 ===');
+                            console.log('HTTP状态码:', xhr.status);
+                            console.log('响应文本:', xhr.responseText);
+                            const errorMsg = `HTTP错误: ${xhr.status}`;
+                            warn('GameProgressManager: 获取下次抽奖层数HTTP错误:', errorMsg);
+                            reject(new Error(errorMsg));
+                        }
+                    }
+                };
+
+                xhr.onerror = () => {
+                    console.log('=== 网络错误 - 获取下次抽奖层数 ===');
+                    const errorMsg = '网络错误';
+                    warn('GameProgressManager: 获取下次抽奖层数网络错误');
+                    reject(new Error(errorMsg));
+                };
+
+                xhr.ontimeout = () => {
+                    console.log('=== 网络超时 - 获取下次抽奖层数 ===');
+                    const errorMsg = '请求超时';
+                    warn('GameProgressManager: 获取下次抽奖层数请求超时');
+                    reject(new Error(errorMsg));
+                };
+
+                xhr.open('GET', url, true);
+                xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                xhr.send();
+            });
+
+        } catch (error) {
+            warn('GameProgressManager: 获取下次抽奖层数失败:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 增加抽奖次数
+     */
+    public async addLottery(): Promise<AddLotteryResponse> {
+        try {
+            const token = ApiConfig.getUserData()?.access_token;
+            if (!token) {
+                throw new Error('用户未登录');
+            }
+
+            // 获取设备信息
+            const deviceInfoCollector = this.deviceInfoCollector || find('DeviceInfoCollector')?.getComponent(DeviceInfoCollector);
+            if (!deviceInfoCollector) {
+                throw new Error('设备信息收集器不可用');
+            }
+
+            const deviceInfo = await deviceInfoCollector.collectDeviceInfo();
+            
+            const req: BaseReq = {
+                androidId: deviceInfo.androidId || '',
+                deviceId: deviceInfo.deviceId || '',
+                requestId: `add_lottery_${Date.now()}`,
+                timeStamp: Date.now(),
+                packageName: ApiConfig.getPackageName()
+            };
+
+            const url = ApiConfig.getFullUrl(ApiConfig.ENDPOINTS.ADD_LOTTERY);
+            const timeout = ApiConfig.getTimeout();
+
+            // 输出请求信息
+            console.log('=== 网络请求 - 增加抽奖次数 ===');
+            console.log('请求URL:', url);
+            console.log('请求方法: POST');
+            console.log('请求头:', { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` });
+            console.log('请求体:', req);
+
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.timeout = timeout;
+
+                xhr.onreadystatechange = () => {
+                    if (xhr.readyState === 4) {
+                        if (xhr.status === 200) {
+                            try {
+                                const response: { code: number; msg: string; data: AddLotteryResponse } = JSON.parse(xhr.responseText);
+                                
+                                // 输出响应信息
+                                console.log('=== 网络响应 - 增加抽奖次数 ===');
+                                console.log('响应状态:', xhr.status);
+                                console.log('响应数据:', response);
+                                
+                                if (response.code === 200 && response.data) {
+                                    const result = response.data;
+                                    
+                                    // 更新本地抽奖次数
+                                    const localProgress = ApiConfig.getLocalGameProgress();
+                                    if (localProgress) {
+                                        localProgress.drawNum = result.drawNum;
+                                        ApiConfig.saveLocalProgressToStorage();
+                                    }
+                                    
+                                    // 更新UI显示
+                                    this.updateDisplay();
+                                    this.updateAllSceneDisplays();
+                                    
+                                    // 显示抽奖UI
+                                    this.showLotteryUI();
+                                    
+                                    log(`GameProgressManager: 增加抽奖次数成功，当前抽奖次数: ${result.drawNum}`);
+                                    resolve(result);
+                                } else {
+                                    const message = response.msg || '增加抽奖次数失败';
+                                    warn('GameProgressManager: 增加抽奖次数失败:', message);
+                                    reject(new Error(message));
+                                }
+                            } catch (parseError) {
+                                console.log('=== 网络响应解析错误 - 增加抽奖次数 ===');
+                                console.log('原始响应:', xhr.responseText);
+                                console.log('解析错误:', parseError);
+                                warn('GameProgressManager: 解析增加抽奖次数响应失败:', parseError);
+                                reject(parseError);
+                            }
+                        } else {
+                            console.log('=== 网络响应错误 - 增加抽奖次数 ===');
+                            console.log('HTTP状态码:', xhr.status);
+                            console.log('响应文本:', xhr.responseText);
+                            const errorMsg = `HTTP错误: ${xhr.status}`;
+                            warn('GameProgressManager: 增加抽奖次数HTTP错误:', errorMsg);
+                            reject(new Error(errorMsg));
+                        }
+                    }
+                };
+
+                xhr.onerror = () => {
+                    console.log('=== 网络错误 - 增加抽奖次数 ===');
+                    const errorMsg = '网络错误';
+                    warn('GameProgressManager: 增加抽奖次数网络错误');
+                    reject(new Error(errorMsg));
+                };
+
+                xhr.ontimeout = () => {
+                    console.log('=== 网络超时 - 增加抽奖次数 ===');
+                    const errorMsg = '请求超时';
+                    warn('GameProgressManager: 增加抽奖次数请求超时');
+                    reject(new Error(errorMsg));
+                };
+
+                xhr.open('POST', url, true);
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                xhr.send(JSON.stringify(req));
+            });
+
+        } catch (error) {
+            warn('GameProgressManager: 增加抽奖次数失败:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 显示抽奖UI（私有方法，内部调用）
+     */
+    private showLotteryUI(): void {
+        this.showLuckyDrawUI();
+    }
+
+    /**
+     * 显示抽奖UI（公共方法，供外部调用）
+     */
+    public showLuckyDrawUI(): void {
+        try {
+            log('GameProgressManager: 开始显示抽奖UI');
+            
+            // 使用持有的LuckyDrawButton引用
+            if (this.luckyDrawButton) {
+                log('GameProgressManager: 通过持有的LuckyDrawButton显示抽奖UI');
+                this.luckyDrawButton.showLuckyDrawUI();
+            } else {
+                warn('GameProgressManager: LuckyDrawButton引用未设置，请在编辑器中正确配置');
+            }
+        } catch (error) {
+            warn('GameProgressManager: 显示抽奖UI失败:', error);
+        }
+    }
+
+    /**
+     * 检查是否应该增加抽奖次数（当合成指定等级物品时）
+     * @param synthesizedLevel 合成的物品等级
+     */
+    public async checkAndAddLottery(synthesizedLevel: number): Promise<boolean> {
+        try {
+            // 从服务器获取下次抽奖层数
+            const nextLotteryLayer = await this.getNextLotteryLayer();
+            
+            // 检查合成等级是否完全匹配下次抽奖层数
+            if (synthesizedLevel === nextLotteryLayer) {
+                log(`GameProgressManager: 合成等级 ${synthesizedLevel} 匹配下次抽奖层数 ${nextLotteryLayer}，开始增加抽奖次数`);
+                
+                // 调用增加抽奖次数API
+                const result = await this.addLottery();
+                
+                if (result.success) {
+                    log('GameProgressManager: 抽奖次数增加成功');
+                    return true;
+                } else {
+                    warn('GameProgressManager: 抽奖次数增加失败');
+                    return false;
+                }
+            } else {
+                log(`GameProgressManager: 合成等级 ${synthesizedLevel} 不匹配下次抽奖层数 ${nextLotteryLayer}，不增加抽奖次数`);
+                return false;
+            }
+            
+        } catch (error) {
+            warn('GameProgressManager: 检查并增加抽奖次数失败:', error);
+            return false;
+        }
+    }
+
     // ======== 工具方法 ========
     private formatNumber(num: number): string {
         return num.toString();
     }
-} 
+}

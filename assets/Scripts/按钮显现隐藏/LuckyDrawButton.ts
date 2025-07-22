@@ -5,6 +5,11 @@ const { ccclass, property } = _decorator;
 /**
  * 抽奖按钮绑定脚本
  * 将此脚本挂载到需要显示抽奖弹窗的按钮上
+ * 
+ * 使用方式（按优先级）：
+ * 1. 设置 luckyDrawComponent - 直接引用抽奖组件
+ * 2. 设置 luckyDrawPrefab - 使用预制体实例化
+ * 3. 自动查找场景中的LuckyDraw组件
  */
 @ccclass('LuckyDrawButton')
 export class LuckyDrawButton extends Component {
@@ -130,11 +135,26 @@ export class LuckyDrawButton extends Component {
     }
 
     /**
+     * 公共方法：显示抽奖UI - 供GameProgressManager调用
+     */
+    public showLuckyDrawUI(): void {
+        this.triggerLuckyDraw();
+    }
+
+    /**
      * 按钮点击事件处理
      */
     private onButtonClick(): void {
+        this.triggerLuckyDraw();
+    }
+
+    /**
+     * 触发抽奖UI显示的核心逻辑
+     */
+    private triggerLuckyDraw(): void {
         console.log('[抽奖按钮] 按钮被点击');
         
+        // 直接使用组件引用
         let luckyDrawComp: any = null;
 
         // 获取LuckyDraw组件
@@ -163,4 +183,4 @@ export class LuckyDrawButton extends Component {
             this.node.off(Node.EventType.TOUCH_END, this.onButtonClick, this);
         }
     }
-} 
+}

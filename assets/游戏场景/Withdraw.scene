@@ -804,6 +804,20 @@
     "__prefab": null,
     "targetSceneName": "首页",
     "autoNavigateOnClick": true,
+    "autoInitializeProgress": true,
+    "autoSaveSceneState": true,
+    "progressInitScenes": [
+      "首页",
+      "main",
+      "home",
+      "index"
+    ],
+    "sceneStateSaveScenes": [
+      "首页",
+      "main",
+      "home",
+      "index"
+    ],
     "_id": "1fSLKXBu1JG4t1Lw5RQGvU"
   },
   {
