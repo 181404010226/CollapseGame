@@ -146,53 +146,83 @@ export class MinePageUIController extends Component {
 
     private processServerData(data: QueryUserAccountVo) {
         console.log('Received server data:', data);
-        // Update nickname
-        if (this.nicknameLabel) {
-            this.nicknameLabel.string = data.nickname || '默认昵称';
-        }
+        
+        try {
+            // Update nickname
+            if (this.nicknameLabel) {
+                this.nicknameLabel.string = data.nickname || '默认昵称';
+            }
 
-        // Update avatar
-        if (this.avatarSprite) {
-            if (data.avatar) {
-                console.log('Loading remote avatar:', data.avatar)
-                // 加载远程头像
-                assetManager.loadRemote<ImageAsset>(data.avatar, (err, image) => {
-                    if (!err && image) {
-                        const texture = new Texture2D();
-                        texture.image = image;
-                        const spriteFrame = new SpriteFrame();
-                        spriteFrame.texture = texture;
-                        this.avatarSprite.spriteFrame = spriteFrame;
-                        console.log('Successfully loaded remote avatar');
-                    } else {
-                        console.warn('Failed to load remote avatar:', err);
-                    }
-                });
-            } 
-        }
+            // Update avatar
+            if (this.avatarSprite && data.avatar) {
+                console.log('Loading remote avatar:', data.avatar);
+                this.loadRemoteAvatar(data.avatar);
+            }
 
-        // Update level
-        if (this.levelLabel) {
-            this.levelLabel.string = `${data.level.toString()}`;
-        }
+            // Update level - 添加空值检查
+            if (this.levelLabel) {
+                const level = data.level != null ? data.level : 1;
+                this.levelLabel.string = `${level}`;
+            }
 
-        // Update progress bar
-        if (this.progressBar) {
-            this.progressBar.progress = parseFloat(data.expPercent) / 100;
-            this.updateMovingNodes();
-        }
+            // Update progress bar
+            if (this.progressBar) {
+                const expPercent = data.expPercent || '0';
+                this.progressBar.progress = parseFloat(expPercent) / 100;
+                this.updateMovingNodes();
+            }
 
-        if (this.idLabel) {
-            this.idLabel.string = data.idNo.toString();
-        }
+            // Update ID - 添加空值检查
+            if (this.idLabel) {
+                const idNo = data.idNo != null ? data.idNo : 0;
+                this.idLabel.string = `ID：${idNo}`;
+            }
 
-        if (this.expPercentLabel) {
-            this.expPercentLabel.string = `${data.expPercent}%`;
-        }
+            // Update exp percent
+            if (this.expPercentLabel) {
+                const expPercent = data.expPercent || '0';
+                this.expPercentLabel.string = `${expPercent}%`;
+            }
 
-        // Update treasure guide
-        if (this.treasureGuideUI) {
-            this.treasureGuideUI.updateTreasures(data.illustrationList);
+            // Update treasure guide
+            if (this.treasureGuideUI && data.illustrationList) {
+                this.treasureGuideUI.updateTreasures(data.illustrationList);
+            }
+        } catch (error) {
+            console.error('Error processing server data:', error);
+        }
+    }
+
+    /**
+     * 安全地加载远程头像
+     */
+    private loadRemoteAvatar(avatarUrl: string) {
+        try {
+            assetManager.loadRemote<ImageAsset>(avatarUrl, (err, imageAsset) => {
+                if (err) {
+                    console.warn('Failed to load remote avatar:', err);
+                    return;
+                }
+                
+                if (!imageAsset || !this.avatarSprite) {
+                    console.warn('ImageAsset or avatarSprite is null');
+                    return;
+                }
+                
+                try {
+                    // 使用与宝物图鉴相同的简单方式
+                    const texture = new Texture2D();
+                    texture.image = imageAsset;
+                    const spriteFrame = new SpriteFrame();
+                    spriteFrame.texture = texture;
+                    this.avatarSprite.spriteFrame = spriteFrame;
+                    console.log('Successfully loaded remote avatar');
+                } catch (textureError) {
+                    console.error('Error creating texture from image:', textureError);
+                }
+            });
+        } catch (error) {
+            console.error('Error loading remote avatar:', error);
         }
     }
 
