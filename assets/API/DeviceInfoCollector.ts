@@ -1,4 +1,5 @@
 import { _decorator, Component, sys, log, native, warn } from 'cc';
+import { NativeBridge, INativeMessageHandler } from './NativeBridgeManager';
 
 const { ccclass, property } = _decorator;
 
@@ -30,7 +31,7 @@ export interface DeviceInfo {
 }
 
 @ccclass('DeviceInfoCollector')
-export class DeviceInfoCollector extends Component {
+export class DeviceInfoCollector extends Component implements INativeMessageHandler {
     
     @property
     private apiBaseUrl: string = 'http://101.133.145.244:7071';
@@ -48,50 +49,65 @@ export class DeviceInfoCollector extends Component {
         warn('当前平台:', sys.platform);
         warn('是否原生:', sys.isNative);
         
-        // 初始化JsbBridge通信
-        this.initNativeBridge();
+        // 注册到统一原生桥接管理器
+        this.registerToNativeBridge();
         
         warn('=== DeviceInfoCollector start 完成 ===');
         log('DeviceInfoCollector组件已启动，准备收集设备信息');
     }
 
     /**
-     * 初始化与原生的通信桥梁
+     * 注册到统一原生桥接管理器
      */
-    private initNativeBridge(): void {
-        warn('开始初始化原生通信桥梁...');
-        warn('检查平台:', sys.platform === sys.Platform.ANDROID ? 'Android' : '其他平台');
-        warn('检查原生环境:', sys.isNative ? '是原生' : '非原生');
+    private registerToNativeBridge(): void {
+        warn('注册DeviceInfoCollector到统一原生桥接管理器...');
         
-        if (sys.platform === sys.Platform.ANDROID && sys.isNative) {
-            warn('满足Android原生条件，设置JsbBridge回调...');
+        try {
+            // 确保原生桥接管理器已初始化
+            const bridgeManager = NativeBridge.ensureInitialized();
             
-            try {
-                // 检查native.bridge是否可用
-                if (typeof native !== 'undefined' && native.bridge) {
-                    warn('native.bridge 可用');
-                    
-                    // 设置接收原生消息的回调
-                    native.bridge.onNative = (command: string, data: string) => {
-                        warn(`收到原生消息: ${command}, 数据: ${data}`);
-                        log(`收到原生消息: ${command}, 数据: ${data}`);
-                        this.handleNativeResponse(command, data);
-                    };
-                    
-                    warn('JsbBridge回调设置成功');
-                } else {
-                    console.error('native.bridge 不可用');
-                }
-            } catch (error) {
-                console.error('设置JsbBridge回调失败:', error);
-            }
-        } else {
-            warn('不满足Android原生条件，跳过JsbBridge初始化');
+            // 注册消息处理器
+            NativeBridge.registerHandler('DeviceInfoCollector', this);
+            
+            warn('DeviceInfoCollector已注册到统一原生桥接管理器');
+        } catch (error) {
+            console.error('注册到原生桥接管理器失败:', error);
         }
-        
-        warn('原生通信桥梁初始化完成');
     }
 
+    /**
+     * 实现INativeMessageHandler接口 - 处理原生消息
+     */
+    public handleNativeMessage(command: string, data: string): boolean {
+        // 只处理设备信息相关的消息
+        if (!this.isDeviceInfoCommand(command)) {
+            return false; // 不是设备信息相关消息，不处理
+        }
+        
+        warn(`DeviceInfoCollector处理原生消息: ${command}, 数据: ${data}`);
+        log(`DeviceInfoCollector处理原生消息: ${command}, 数据: ${data}`);
+        
+        this.handleNativeResponse(command, data);
+        return true; // 消息已处理
+    }
+    
+    /**
+     * 检查是否是设备信息相关的命令
+     */
+    private isDeviceInfoCommand(command: string): boolean {
+        const deviceInfoCommands = [
+            'deviceInfoResult',
+            'deviceInfoError', 
+            'androidIdResult',
+            'simInfoResult',
+            'deviceModelResult',
+            'batteryInfoResult',
+            'networkInfoResult',
+            'systemInfoResult'
+        ];
+        return deviceInfoCommands.includes(command);
+    }
+    
     /**
      * 处理来自原生的响应
      */
@@ -272,8 +288,19 @@ export class DeviceInfoCollector extends Component {
      */
     private requestNativeDeviceInfo(): void {
         try {
-            native.bridge.sendToNative('getDeviceInfo', '');
-            log('已发送设备信息请求到Android原生');
+            // 使用统一原生桥接管理器发送消息
+            const success = NativeBridge.sendToNative('getDeviceInfo', '');
+            if (success) {
+                log('已通过统一桥接管理器发送设备信息请求到Android原生');
+            } else {
+                warn('统一桥接管理器发送失败，尝试直接发送');
+                if (typeof native !== 'undefined' && native.bridge) {
+                    native.bridge.sendToNative('getDeviceInfo', '');
+                    log('已直接发送设备信息请求到Android原生');
+                } else {
+                    throw new Error('原生桥接不可用');
+                }
+            }
         } catch (error) {
             warn('发送原生请求失败:', error);
             this.handleDeviceInfoError('发送请求失败: ' + error.message);
@@ -304,7 +331,10 @@ export class DeviceInfoCollector extends Component {
                 };
                 
                 try {
-                    native.bridge.sendToNative('getAndroidId', '');
+                    const success = NativeBridge.sendToNative('getAndroidId', '');
+                    if (!success && typeof native !== 'undefined' && native.bridge) {
+                        native.bridge.sendToNative('getAndroidId', '');
+                    }
                 } catch (error) {
                     clearTimeout(timeout);
                     warn('发送获取Android ID请求失败:', error);
@@ -338,7 +368,10 @@ export class DeviceInfoCollector extends Component {
                 };
                 
                 try {
-                    native.bridge.sendToNative('getSimInfo', '');
+                    const success = NativeBridge.sendToNative('getSimInfo', '');
+                    if (!success && typeof native !== 'undefined' && native.bridge) {
+                        native.bridge.sendToNative('getSimInfo', '');
+                    }
                 } catch (error) {
                     clearTimeout(timeout);
                     warn('发送获取SIM信息请求失败:', error);
@@ -461,4 +494,4 @@ export class DeviceInfoCollector extends Component {
         this.rejectDeviceInfoPromise = null;
         log('设备信息缓存已清除');
     }
-} 
+}

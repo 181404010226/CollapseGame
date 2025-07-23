@@ -1,5 +1,6 @@
 import { _decorator, Component, log, warn, game, director } from 'cc';
 import { native } from 'cc';
+import { NativeBridge, INativeMessageHandler } from './NativeBridgeManager';
 
 const { ccclass, property } = _decorator;
 
@@ -31,7 +32,7 @@ export interface PangleAdEventCallback {
  * 负责与Android端的穿山甲广告SDK进行桥接通信
  */
 @ccclass('PangleAdManager')
-export class PangleAdManager extends Component {
+export class PangleAdManager extends Component implements INativeMessageHandler {
     
     private static instance: PangleAdManager = null;
     private callback: PangleAdEventCallback = null;
@@ -48,8 +49,8 @@ export class PangleAdManager extends Component {
         // 设置全局实例
         PangleAdManager.instance = this;
         
-        // 注册原生回调
-        this.registerNativeCallbacks();
+        // 注册到统一原生桥接管理器
+        this.registerToNativeBridge();
         
         log('PangleAdManager 已初始化');
     }
@@ -65,12 +66,31 @@ export class PangleAdManager extends Component {
         director.addPersistRootNode(this.node);
         PangleAdManager.instance = this;
         
-        // 注册原生回调
-        this.registerNativeCallbacks();
+        // 注册到统一原生桥接管理器
+        this.registerToNativeBridge();
     }
     
     /**
-     * 注册原生回调
+     * 注册到统一原生桥接管理器
+     */
+    public registerToNativeBridge() {
+        log('注册PangleAdManager到统一原生桥接管理器...');
+        
+        try {
+            // 确保原生桥接管理器已初始化
+            const bridgeManager = NativeBridge.ensureInitialized();
+            
+            // 注册消息处理器
+            NativeBridge.registerHandler('PangleAdManager', this);
+            
+            log('PangleAdManager已注册到统一原生桥接管理器');
+        } catch (error) {
+            console.error('注册到原生桥接管理器失败:', error);
+        }
+    }
+    
+    /**
+     * 原有的注册原生回调方法（保留用于兼容性）
      */
     public registerNativeCallbacks() {
         log('开始注册原生回调...');
@@ -211,6 +231,36 @@ export class PangleAdManager extends Component {
         } else {
             log('❌ globalThis.onPangleCallback 不存在');
         }
+    }
+    
+    /**
+     * 实现INativeMessageHandler接口 - 处理原生消息
+     */
+    public handleNativeMessage(command: string, data: string): boolean {
+        // 只处理穿山甲广告相关的消息
+        if (!this.isPangleAdCommand(command)) {
+            return false; // 不是穿山甲广告相关消息，不处理
+        }
+        
+        log(`PangleAdManager处理原生消息: ${command} -> ${data}`);
+        this.handleNativeCallback(command, data);
+        return true; // 消息已处理
+    }
+    
+    /**
+     * 检查是否是穿山甲广告相关的命令
+     */
+    private isPangleAdCommand(command: string): boolean {
+        const pangleCommands = [
+            'pangleInitResult',
+            'pangleAdLoadResult',
+            'pangleAdRenderResult',
+            'pangleAdShowResult',
+            'pangleAdClick',
+            'pangleAdClose',
+            'pangleAdReady'
+        ];
+        return pangleCommands.includes(command);
     }
     
     /**
@@ -472,11 +522,18 @@ export class PangleAdManager extends Component {
      * 发送命令到原生端
      */
     private sendToNative(command: string, data: string) {
-        // 方法1: 优先使用native.bridge.sendToNative (Cocos Creator 3.8.6推荐)
+        // 优先使用统一原生桥接管理器
+        const success = NativeBridge.sendToNative(command, data);
+        if (success) {
+            log(`通过统一桥接管理器发送到原生端: ${command} -> ${data}`);
+            return;
+        }
+        
+        // 备用方案：直接使用原生桥接
         if (typeof native !== 'undefined' && native.bridge) {
             try {
                 native.bridge.sendToNative(command, data);
-                log(`发送到原生端 (native.bridge): ${command} -> ${data}`);
+                log(`直接发送到原生端 (native.bridge): ${command} -> ${data}`);
                 return;
             } catch (e) {
                 console.error('native.bridge发送失败:', e);
@@ -498,6 +555,14 @@ export class PangleAdManager extends Component {
     }
     
     onDestroy() {
+        // 从统一原生桥接管理器注销
+        try {
+            NativeBridge.unregisterHandler('PangleAdManager');
+            log('PangleAdManager已从统一原生桥接管理器注销');
+        } catch (error) {
+            warn('从统一原生桥接管理器注销失败:', error);
+        }
+        
         // 清理回调
         this.callback = null;
         
@@ -566,4 +631,4 @@ export namespace PangleAd {
             return false;
         }
     }
-} 
+}

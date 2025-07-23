@@ -286,7 +286,7 @@ export class ApiConfig {
         production: {
             name: 'production',
             baseUrl: 'http://101.133.145.244:7071',
-            timeout: 10000,
+            timeout: 15000,
             description: '生产环境'
         },
         
