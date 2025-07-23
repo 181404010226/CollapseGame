@@ -95,14 +95,17 @@ export class RiskDetectionService extends Component {
      * 构建风控上报请求数据
      */
     private async buildRiskDetectionRequest(deviceInfo: DeviceInfo): Promise<RiskDetectionRequest> {
+        // 根据环境决定使用真实或模拟设备ID
+        const defaultDeviceInfo = await ApiConfig.getDefaultDeviceInfo();
+        
         return {
             // 必填字段
-            androidId: deviceInfo.androidId || this.generateMockAndroidId(),
+            androidId: deviceInfo.androidId || defaultDeviceInfo.androidId,
             requestId: this.generateRequestId(),
             timeStamp: Date.now(),
             
             // 可选字段
-            deviceId: deviceInfo.deviceId || '13974751124',
+            deviceId: deviceInfo.deviceId || defaultDeviceInfo.deviceId,
             packageName: ApiConfig.getPackageName(),
             simCard: deviceInfo.simCard,
             noSimCard: !deviceInfo.simCard || deviceInfo.simCard.length === 0,
@@ -176,10 +179,13 @@ export class RiskDetectionService extends Component {
         try {
             log('开始使用模拟数据执行风控上报...');
             
+            // 根据环境决定使用真实或模拟设备ID
+            const defaultDeviceInfo = await ApiConfig.getDefaultDeviceInfo();
+            
             // 构建模拟请求数据
             const mockRequestData: RiskDetectionRequest = {
-                androidId: this.generateMockAndroidId(),
-                deviceId: '13974751124',
+                androidId: defaultDeviceInfo.androidId,
+                deviceId: defaultDeviceInfo.deviceId,
                 requestId: this.generateRequestId(),
                 timeStamp: Date.now(),
                 packageName: ApiConfig.getPackageName(),
@@ -358,4 +364,4 @@ export class RiskDetectionService extends Component {
         const now = Date.now();
         return (now - this.lastReportTime) >= this.autoReportInterval;
     }
-} 
+}

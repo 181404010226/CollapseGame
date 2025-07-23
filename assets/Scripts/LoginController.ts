@@ -511,6 +511,21 @@ export class LoginController extends Component {
             localStorage.setItem('wechat_user_info', JSON.stringify(userInfo));
             console.log("用户登录信息已保存到本地存储");
             
+            // 构建用户数据（符合UserData接口）并保存到ApiConfig
+            const userData: UserData = {
+                openid: loginResult.openid || null,
+                wechatNickname: null, // 微信登录结果中没有昵称信息
+                wechatAvatar: null,   // 微信登录结果中没有头像信息
+                isRealName: false,    // 默认为false，后续可通过其他接口获取
+                access_token: loginResult.access_token || '',
+                expire_in: loginResult.expire_in || 0,
+                client_id: loginResult.client_id || null
+            };
+            
+            // 保存用户数据到 ApiConfig 供全局使用
+            ApiConfig.setUserData(userData);
+            console.log('微信登录用户数据已保存到ApiConfig:', userData);
+            
         } catch (error) {
             console.warn("保存用户登录信息失败:", error);
         }
@@ -714,4 +729,4 @@ export class LoginController extends Component {
     }
 
 
-} 
+}

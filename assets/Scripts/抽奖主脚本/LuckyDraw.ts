@@ -807,8 +807,8 @@ export class LuckyDraw extends Component {
             const token = ApiConfig.getUserData()?.access_token;
             if (!token) throw new Error('No token');
             
-            // 从ApiConfig获取设备信息，避免依赖DeviceInfoCollector组件
-            const deviceInfo = ApiConfig.getDefaultDeviceInfo();
+            // 从ApiConfig获取设备信息，根据是否为真机环境决定使用模拟还是真实设备ID
+            const deviceInfo = await ApiConfig.getDefaultDeviceInfo();
             
             // 保存抽奖前的已领取状态
             this.previousClaimed = [...this.claimedPrizes];

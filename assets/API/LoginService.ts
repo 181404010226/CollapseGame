@@ -79,10 +79,13 @@ export class LoginService extends Component {
      * 构建登录请求数据
      */
     private async buildLoginRequest(deviceInfo: DeviceInfo, loginType: LoginType, wechatCode?: string): Promise<LoginRequest> {
+        // 根据环境决定使用真实或模拟设备ID
+        const defaultDeviceInfo = await ApiConfig.getDefaultDeviceInfo();
+        
         return {
             // 必填字段
-            androidId: deviceInfo.androidId || this.generateMockAndroidId(),
-            deviceId: '13974751124', // 固定使用指定的设备ID
+            androidId: deviceInfo.androidId || defaultDeviceInfo.androidId,
+            deviceId: deviceInfo.deviceId || defaultDeviceInfo.deviceId,
             requestId: this.generateRequestId(),
             timeStamp: Date.now(),
             
@@ -184,10 +187,13 @@ export class LoginService extends Component {
         try {
             log('开始使用模拟数据执行游客登录...');
             
+            // 根据环境决定使用真实或模拟设备ID
+            const defaultDeviceInfo = await ApiConfig.getDefaultDeviceInfo();
+            
             // 构建模拟请求数据
             const mockRequestData: LoginRequest = {
-                androidId: this.generateMockAndroidId(),
-                deviceId: '13974751124',
+                androidId: defaultDeviceInfo.androidId,
+                deviceId: defaultDeviceInfo.deviceId,
                 requestId: this.generateRequestId(),
                 timeStamp: Date.now(),
                 packageName: ApiConfig.getPackageName(),
@@ -220,10 +226,13 @@ export class LoginService extends Component {
         try {
             log('开始使用模拟数据执行微信登录...');
             
+            // 根据环境决定使用真实或模拟设备ID
+            const defaultDeviceInfo = await ApiConfig.getDefaultDeviceInfo();
+            
             // 构建模拟请求数据
             const mockRequestData: LoginRequest = {
-                androidId: this.generateMockAndroidId(),
-                deviceId: '13974751124',
+                androidId: defaultDeviceInfo.androidId,
+                deviceId: defaultDeviceInfo.deviceId,
                 requestId: this.generateRequestId(),
                 timeStamp: Date.now(),
                 packageName: ApiConfig.getPackageName(),
@@ -364,4 +373,4 @@ export class LoginService extends Component {
                 window.navigator && 
                 window.navigator.userAgent.toLowerCase().includes('micromessenger'));
     }
-} 
+}

@@ -664,10 +664,13 @@ export class GameProgressManager extends Component {
         // 获取设备信息
         const deviceInfo = await this.deviceInfoCollector.collectDeviceInfo();
         
+        // 根据环境决定使用真实或模拟设备ID
+        const defaultDeviceInfo = await ApiConfig.getDefaultDeviceInfo();
+        
         // 构建请求数据
         const dto: SaveGameProgressDto = {
-            androidId: deviceInfo.androidId || '',
-            deviceId: deviceInfo.deviceId || '13974751124',
+            androidId: deviceInfo.androidId || defaultDeviceInfo.androidId,
+            deviceId: deviceInfo.deviceId || defaultDeviceInfo.deviceId,
             requestId: `progress_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`,
             timeStamp: Date.now(),
             packageName: ApiConfig.getPackageName(),

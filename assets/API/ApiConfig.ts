@@ -1,3 +1,4 @@
+
 /**
  * API配置文件
  * 集中管理所有API相关的配置信息
@@ -763,13 +764,75 @@ export class ApiConfig {
     }
 
     /**
-     * 获取默认设备信息
-     * 提供基础的设备信息，避免依赖DeviceInfoCollector组件
+     * 判断是否为真机环境
+     * @returns true表示真机环境，false表示模拟器或非原生环境
      */
-    public static getDefaultDeviceInfo(): { androidId: string; deviceId: string } {
+    public static isRealDevice(): boolean {
+        // 导入sys模块来检查平台和原生状态
+        const { sys } = require('cc');
+        
+        // 只有在Android原生环境下才认为是真机
+        return sys.platform === sys.Platform.ANDROID && sys.isNative;
+    }
+
+    /**
+     * 获取默认设备信息
+     * 根据是否为真机环境决定使用模拟设备ID还是真实设备ID
+     */
+    public static async getDefaultDeviceInfo(): Promise<{ androidId: string; deviceId: string }> {
+        // 检查是否为真机环境
+        if (this.isRealDevice()) {
+            try {
+                // 真机环境：尝试获取真实设备信息
+                const { DeviceInfoCollector } = await import('./DeviceInfoCollector');
+                const { director } = require('cc');
+                
+                // 尝试从场景中找到DeviceInfoCollector实例
+                const scene = director.getScene();
+                let deviceCollector = scene?.getComponentInChildren(DeviceInfoCollector);
+                
+                if (deviceCollector) {
+                    // 获取真实的Android ID和设备ID
+                    const androidId = await deviceCollector.getAndroidId();
+                    const deviceInfo = await deviceCollector.collectDeviceInfo();
+                    
+                    return {
+                        androidId: androidId || this.generateMockAndroidId(),
+                        deviceId: deviceInfo?.deviceId || '13974751124'
+                    };
+                } else {
+                    console.warn('ApiConfig: 未找到DeviceInfoCollector实例，使用默认设备信息');
+                }
+            } catch (error) {
+                console.warn('ApiConfig: 获取真实设备信息失败，使用默认设备信息:', error);
+            }
+        }
+        
+        // 非真机环境或获取失败：使用模拟设备信息
         return {
             androidId: this.generateMockAndroidId(),
             deviceId: '13974751124' // 使用固定的设备ID，与其他地方保持一致
+        };
+    }
+
+    /**
+     * 获取默认设备信息（同步版本，用于向后兼容）
+     * 只有非真机的情况下才使用模拟设备ID，其余情况要获取真实设备ID
+     */
+    public static getDefaultDeviceInfoSync(): { androidId: string; deviceId: string } {
+        // 如果是真机环境，返回空值，提示应该使用异步方法
+        if (this.isRealDevice()) {
+            console.warn('ApiConfig: 真机环境下应使用 getDefaultDeviceInfo() 异步方法获取真实设备信息');
+            return {
+                androidId: '',
+                deviceId: ''
+            };
+        }
+        
+        // 非真机环境：使用模拟设备信息
+        return {
+            androidId: this.generateMockAndroidId(),
+            deviceId: '13974751124'
         };
     }
 
