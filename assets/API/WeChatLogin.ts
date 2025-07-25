@@ -55,7 +55,7 @@ export class WeChatLogin extends Component implements INativeMessageHandler {
         log('=== 微信登录管理器初始化 ===');
         log(`使用微信AppID: ${ApiConfig.getWeChatAppId()}`);
         log(`API地址: ${ApiConfig.getBaseUrl()}`);
-        log(`登录端点: ${ApiConfig.ENDPOINTS.WECHAT_LOGIN}`);
+        log(`登录端点: ${ApiConfig.API_ENDPOINTS.WECHAT_LOGIN}`);
         
         // 注册到统一原生桥接管理器
         this.registerToNativeBridge();
@@ -341,7 +341,7 @@ export class WeChatLogin extends Component implements INativeMessageHandler {
             // 构建API URL和请求参数
             const packageName = ApiConfig.getPackageName();
             const releaseChannel = ApiConfig.getReleaseChannel();
-            const apiUrl = ApiConfig.getFullUrl(ApiConfig.ENDPOINTS.WECHAT_LOGIN);
+            const apiUrl = ApiConfig.getFullUrl(ApiConfig.API_ENDPOINTS.WECHAT_LOGIN);
             
             // 构建POST请求体
             const requestBody = {
@@ -645,8 +645,8 @@ export class WeChatLogin extends Component implements INativeMessageHandler {
             wechatAppId: ApiConfig.getWeChatAppId(),
             wechatScope: ApiConfig.getWeChatScope(),
             releaseChannel: ApiConfig.getReleaseChannel(),
-            loginEndpoint: ApiConfig.ENDPOINTS.WECHAT_LOGIN,
-            fullLoginUrl: ApiConfig.getFullUrl(ApiConfig.ENDPOINTS.WECHAT_LOGIN),
+            loginEndpoint: ApiConfig.API_ENDPOINTS.WECHAT_LOGIN,
+            fullLoginUrl: ApiConfig.getFullUrl(ApiConfig.API_ENDPOINTS.WECHAT_LOGIN),
             timeout: ApiConfig.getTimeout(),
             packageName: ApiConfig.getPackageName(),
             currentEnv: ApiConfig.getCurrentEnvironment().name

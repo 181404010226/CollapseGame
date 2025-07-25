@@ -3,6 +3,7 @@ import { ItemData } from './ItemData';
 import { EffectContainerPool } from './EffectContainerPool';
 import { GameProgressManager } from './GameProgressManager';
 import { RewardEffectController } from './RewardEffectController';
+import { AudioManager } from './音乐/AudioManager';
 const { ccclass, property } = _decorator;
 
 /**
@@ -609,6 +610,12 @@ export class ItemDropGame extends Component {
             return;
         }
         
+        // 播放碰撞音效
+        const audioManager = AudioManager.getInstance();
+        if (audioManager) {
+            audioManager.playDropSound();
+        }
+        
         const selfNode = selfCollider.node;
         const otherNode = otherCollider.node;
         
@@ -776,6 +783,12 @@ export class ItemDropGame extends Component {
                 this.enablePhysicsForItem(newItem);
             }
         }, 0.1);
+
+        // 播放金币音效
+        const audioManager = AudioManager.getInstance();
+        if (audioManager) {
+            audioManager.playCoinSound();
+        }
     }
     
     /**

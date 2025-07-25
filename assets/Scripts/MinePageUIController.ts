@@ -112,7 +112,7 @@ export class MinePageUIController extends Component {
 
     private async fetchUserAccountInfo() {
         try {
-            const url = ApiConfig.getFullUrl(ApiConfig.ENDPOINTS.QUERY_USER_ACCOUNT);
+            const url = ApiConfig.getFullUrl(ApiConfig.API_ENDPOINTS.QUERY_USER_ACCOUNT);
             const userData = ApiConfig.getUserData();
             const token = userData?.access_token;
             if (!token) {

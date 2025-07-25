@@ -1,5 +1,6 @@
 import { _decorator, Component, Node, Button, director } from 'cc';
 import { GameProgressManager } from '../GameProgressManager';
+
 const { ccclass, property } = _decorator;
 
 /**

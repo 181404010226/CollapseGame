@@ -578,7 +578,7 @@ export class ApiConfig {
     };
 
     // API端点配置
-    public static readonly ENDPOINTS = {
+    public static readonly API_ENDPOINTS = {
         // 版本相关
         GET_VERSION: '/home/getVersion',
         
@@ -603,6 +603,14 @@ export class ApiConfig {
         PRIZE: '/game/prize',
         GET_NEXT_LOTTERY_LAYER: '/game/getNextLotteryLayer',
         ADD_LOTTERY: '/game/addLottery',
+
+        //签到相关
+        QUERY_SIGNIN_CALENDAR: '/account/querySignInCalendar',
+        SIGN_IN: '/account/signIn',
+
+        // 任务相关
+        QUERY_ACTIVE_TASKS: '/task/queryActiveTasks',
+        COMPLETE_TASK: '/task/completeTask',
         
         // 其他端点...
     };

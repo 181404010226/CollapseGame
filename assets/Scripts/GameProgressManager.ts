@@ -1,7 +1,8 @@
-import { _decorator, Component, Label, log, warn, director, find } from 'cc';
+import { _decorator, Component, Label, log, warn, Node,director, find } from 'cc';
 import { ApiConfig, LocalGameProgress, GameSceneData, BaseReq, AjaxResult, GetNextLotteryLayerResponse, AddLotteryResponse } from '../API/ApiConfig';
 import { DeviceInfoCollector } from '../API/DeviceInfoCollector';
 import { LuckyDrawButton } from './按钮显现隐藏/LuckyDrawButton';
+import { AudioManager } from './音乐/AudioManager';
 
 const { ccclass, property } = _decorator;
 
@@ -212,19 +213,45 @@ export class GameProgressManager extends Component {
             // 4. 更新UI显示
             this.updateDisplay();
             this.updateAllSceneDisplays();
+
+        
             
             // 5. 尝试恢复场景中的物品状态
             await this.restoreSceneItemsState();
+
+            //初始化音频管理器并播放背景音乐
+            this.initAudioManager();
             
             log('GameProgressManager: 游戏进度初始化完成');
+
+            //
             
         } catch (error) {
             warn('GameProgressManager: 初始化游戏进度时发生错误:', error);
+            warn('GameProgressManager: 初始化失败:', error);
             // 即使初始化失败，也要更新UI显示
             this.updateDisplay();
         }
     }
 
+    /**
+     * 初始化音频管理器并播放首页背景音乐
+     */
+    private initAudioManager(): void {
+        // 检查是否已存在音频管理器
+        let audioManager = AudioManager.getInstance();
+        
+        if (!audioManager) {
+            // 在当前节点上添加音频管理器组件
+            audioManager = this.node.addComponent(AudioManager);
+            console.log('AudioManager 组件已添加，请在编辑器中设置音频文件');
+        }
+        
+        // 播放首页背景音乐
+        if (audioManager) {
+            audioManager.playHomeBGM();
+        }
+    }
     /**
      * 恢复场景中的物品状态
      */
@@ -1001,7 +1028,7 @@ export class GameProgressManager extends Component {
                 throw new Error('用户未登录');
             }
 
-            const url = ApiConfig.getFullUrl(ApiConfig.ENDPOINTS.GET_NEXT_LOTTERY_LAYER);
+            const url = ApiConfig.getFullUrl(ApiConfig.API_ENDPOINTS.GET_NEXT_LOTTERY_LAYER);
             const timeout = ApiConfig.getTimeout();
 
             // 输出请求信息
@@ -1106,7 +1133,7 @@ export class GameProgressManager extends Component {
                 packageName: ApiConfig.getPackageName()
             };
 
-            const url = ApiConfig.getFullUrl(ApiConfig.ENDPOINTS.ADD_LOTTERY);
+            const url = ApiConfig.getFullUrl(ApiConfig.API_ENDPOINTS.ADD_LOTTERY);
             const timeout = ApiConfig.getTimeout();
 
             // 输出请求信息

@@ -210,7 +210,7 @@ export class LuckyDraw extends Component {
 
     private async fetchLotteryData(): Promise<void> {
         try {
-            const url = ApiConfig.getFullUrl(ApiConfig.ENDPOINTS.LOTTERY);
+            const url = ApiConfig.getFullUrl(ApiConfig.API_ENDPOINTS.LOTTERY);
             const token = ApiConfig.getUserData()?.access_token;
             if (!token) throw new Error('No token');
             
@@ -803,7 +803,7 @@ export class LuckyDraw extends Component {
 
     private async drawPrize(): Promise<{id: number}> {
         try {
-            const url = ApiConfig.getFullUrl(ApiConfig.ENDPOINTS.PRIZE);
+            const url = ApiConfig.getFullUrl(ApiConfig.API_ENDPOINTS.PRIZE);
             const token = ApiConfig.getUserData()?.access_token;
             if (!token) throw new Error('No token');
             

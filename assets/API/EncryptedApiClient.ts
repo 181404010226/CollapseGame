@@ -232,7 +232,7 @@ export class EncryptedApiClient extends Component {
             log('请求参数:', requestData);
 
             // 发送请求
-            const response = await this.sendSignedRequest<GetVersionResponse>(ApiConfig.ENDPOINTS.GET_VERSION, requestData);
+            const response = await this.sendSignedRequest<GetVersionResponse>(ApiConfig.API_ENDPOINTS.GET_VERSION, requestData);
             
             // 使用ApiConfig判断响应是否成功
             if (ApiConfig.isResponseSuccess(response.code) && response.data) {

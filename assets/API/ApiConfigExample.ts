@@ -104,7 +104,7 @@ export class ApiConfigExample extends Component {
      * 测试API端点
      */
     private onTestEndpointsClick(): void {
-        const endpoints = ApiConfig.ENDPOINTS;
+        const endpoints = ApiConfig.API_ENDPOINTS;
         
         let endpointInfo = '=== API端点测试 ===\n';
         
@@ -147,7 +147,7 @@ export class ApiConfigExample extends Component {
         log('版本:', ApiConfig.getCurrentVersion());
         
         // 构建完整URL
-        const versionUrl = ApiConfig.getFullUrl(ApiConfig.ENDPOINTS.GET_VERSION);
+        const versionUrl = ApiConfig.getFullUrl(ApiConfig.API_ENDPOINTS.GET_VERSION);
         log('版本检查完整URL:', versionUrl);
         
         // 检查响应状态

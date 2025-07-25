@@ -1,10 +1,12 @@
-import { _decorator, Component, Node, Button, Label, Toggle, Sprite, UIOpacity, SpriteFrame, resources, TextAsset, director, game } from 'cc';
+import { _decorator, Component, Node, Button, Label, Toggle, Sprite, UIOpacity, SpriteFrame, resources, TextAsset, director, game,find } from 'cc';
 import { AgreementDialogController } from './AgreementDialogController';
 import { WeChatLogin, WeChatLoginResult } from '../API/WeChatLogin';
 import { PangleAd } from '../API/PangleAdManager';
 import { ApiConfig, UserData } from '../API/ApiConfig';
 import { LoginService, LoginResponse } from '../API/LoginService';
 import { GameProgressManager } from './GameProgressManager';
+import { OnlineTimeManager } from './任务中心/OnlineTimeManager';
+
 const { ccclass, property } = _decorator;
 
 @ccclass('LoginController')
@@ -479,19 +481,53 @@ export class LoginController extends Component {
             // 2. 使用统一的数据同步和恢复方法
             await GameProgressManager.syncAndRestoreGameData();
 
-            // 3. 在后台初始化穿山甲 SDK
+            // 3. 开始在线时长计时（在PangleAdRoot节点加载时）
+            this.startOnlineTimeTracking();
+
+            // 4. 在后台初始化穿山甲 SDK
             try {
                 await PangleAd.init({
                     onInitResult: (ok, msg) => console.log('穿山甲初始化', ok, msg)
                 });
 
-                // 4. SDK 初始化完成后再展示开屏广告
+                // 5. SDK 初始化完成后再展示开屏广告
                 const ok = await PangleAd.showSplashAd();
                 console.log('开屏广告播放结果:', ok);
             } catch (e) {
                 console.error('穿山甲广告流程出错', e);
             }
         });
+    }
+
+    /**
+     * 开始在线时长追踪
+     */
+    private startOnlineTimeTracking(): void {
+        try {
+            // 查找PangleAdRoot节点
+            const pangleAdRoot = find('PangleAdRoot');
+            if (pangleAdRoot) {
+                console.log('找到PangleAdRoot节点，开始在线时长计时');
+                
+                // 获取或创建OnlineTimeManager - 修复：使用类型而不是字符串
+                let timeManager = pangleAdRoot.getComponent(OnlineTimeManager);
+                
+                if (!timeManager) {
+                    timeManager = pangleAdRoot.addComponent(OnlineTimeManager);
+                    console.log('已为PangleAdRoot添加OnlineTimeManager组件');
+                }
+                
+                // 开始计时
+                if (timeManager && timeManager.startTiming) {
+                    timeManager.startTiming();
+                    console.log('在线时长计时已开始');
+                }
+            } else {
+                console.warn('未找到PangleAdRoot节点，无法开始时长计时');
+            }
+        } catch (error) {
+            console.error('开始在线时长追踪失败:', error);
+        }
     }
 
     /**
