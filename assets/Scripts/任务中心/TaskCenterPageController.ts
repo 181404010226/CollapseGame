@@ -12,6 +12,7 @@ export enum TaskButtonState {
     COUNTDOWN = 'countdown',        // 倒计时（黄色，显示具体时间）
     CLAIMABLE = 'claimable',        // 可领取（红色）
     COMPLETED = 'completed'         // 已完成（灰色）
+
 }
 
 /**
@@ -143,7 +144,9 @@ export class TaskCenterPageController extends Component {
         // 验证每个任务数据的完整性
         for (let i = 0; i < data.taskMap.length; i++) {
             const task = data.taskMap[i];
-            if (typeof task.gold !== 'number' || typeof task.time !== 'number') {
+            if (typeof task.gold !== 'number' ||
+                typeof task.time !== 'number' ||
+                typeof task.isGet !== 'boolean') {
                 console.error(`任务${i}数据格式错误:`, task);
                 return false;
             }
@@ -162,14 +165,14 @@ export class TaskCenterPageController extends Component {
         this.taskData = {
             activeTask: null,
             taskMap: [
-                { gold: 500, time: 10, status: 0 },
-                { gold: 1000, time: 100, status: 0 },
-                { gold: 1500, time: 1000, status: 0 },
-                { gold: 2000, time: 10000, status: 0 },
-                { gold: 2500, time: 10, status: 0 },
-                { gold: 3000, time: 10, status: 0 },
-                { gold: 3500, time: 10, status: 0 },
-                { gold: 4000, time: 10, status: 0 }
+                { time: 10, gold: 50, isGet: false },
+                { time: 20, gold: 100, isGet: false },
+                { time: 30, gold: 150, isGet: false },
+                { time: 40, gold: 200, isGet: false },
+                { time: 50, gold: 250, isGet: false },
+                { time: 60, gold: 300, isGet: false },
+                { time: 70, gold: 350, isGet: false },
+                { time: 80, gold: 400, isGet: false }
             ]
         };
 
@@ -477,8 +480,8 @@ export class TaskCenterPageController extends Component {
     }
 
     /**
-     * 领取任务奖励（更新以支持倒计时流转）
-     */
+  * 领取任务奖励（更新以支持广告观看流程）
+  */
     private async onClaimTaskReward(taskIndex: number, taskData: ActiveTaskData): Promise<void> {
         console.log(`尝试领取任务${taskIndex}奖励`);
 
@@ -495,6 +498,23 @@ export class TaskCenterPageController extends Component {
         }
 
         try {
+            // 检查是否已经观看过广告
+            if (!taskData.isGet) {
+                console.log(`任务${taskIndex}需要先观看广告`);
+
+                // 显示广告
+                const watchSuccess = await this.showAdForTaskReward(taskIndex, taskData);
+
+                if (!watchSuccess) {
+                    console.log(`任务${taskIndex}广告观看失败或取消`);
+                    return;
+                }
+
+                // 广告观看成功，更新isGet状态
+                taskData.isGet = true;
+                console.log(`任务${taskIndex}广告观看成功`);
+            }
+
             // 调用后端API领取奖励
             const success = await this.claimTaskRewardFromServer(taskIndex, taskData);
 
@@ -521,7 +541,6 @@ export class TaskCenterPageController extends Component {
             this.showClaimFailedTip();
         }
     }
-
     /**
      * 显示任务进度（更新以支持倒计时信息）
      */
@@ -627,7 +646,13 @@ export class TaskCenterPageController extends Component {
         this.taskNodes = [];
 
         if (this.taskContainer) {
-            this.taskContainer.removeAllChildren();
+            // 修改后的安全代码
+            if (this.taskContainer && this.taskContainer.isValid) {
+                const children = this.taskContainer.children;
+                if (children && Array.isArray(children) && children.length > 0) {
+                    this.taskContainer.removeAllChildren();
+                }
+            }
         }
     }
 
@@ -661,12 +686,6 @@ export class TaskCenterPageController extends Component {
         console.log(`显示奖励效果: +${goldAmount}金币`);
     }
 
-    /**
-     * 显示领取失败提示
-     */
-    private showClaimFailedTip(): void {
-        console.log('显示领取失败提示');
-    }
 
     /**
   * 获取任务状态调试信息
@@ -1154,22 +1173,89 @@ export class TaskCenterPageController extends Component {
     }
 
     /**
-     * 计算单个任务的实际时长（非累计时长）
+     * 计算实际任务时长（当前任务相对于前一个任务的增量时长）
      */
     private calculateActualTaskTime(taskIndex: number): number {
         if (!this.taskData?.taskMap || taskIndex >= this.taskData.taskMap.length) {
             return 0;
         }
 
-        const currentCumulativeTime = this.taskData.taskMap[taskIndex].time;
+        const currentTask = this.taskData.taskMap[taskIndex];
 
         if (taskIndex === 0) {
             // 第一个任务的实际时长就是累计时长
-            return currentCumulativeTime;
+            return currentTask.time;
         }
 
         // 其他任务的实际时长 = 当前累计时长 - 前一个任务的累计时长
-        const previousCumulativeTime = this.taskData.taskMap[taskIndex - 1].time;
-        return currentCumulativeTime - previousCumulativeTime;
+        const previousTask = this.taskData.taskMap[taskIndex - 1];
+        return currentTask.time - previousTask.time;
+    }
+    /**
+ * 显示广告获取任务奖励
+ */
+    private async showAdForTaskReward(taskIndex: number, taskData: ActiveTaskData): Promise<boolean> {
+        console.log(`显示任务${taskIndex}的奖励广告`);
+
+        try {
+            // TODO: 这里调用真实的广告API
+            // 目前使用模拟实现
+            const result = await this.simulateAdWatch();
+
+            if (result) {
+                console.log(`任务${taskIndex}广告观看完成`);
+                this.showAdWatchSuccessTip();
+                return true;
+            } else {
+                console.log(`任务${taskIndex}广告观看失败或被取消`);
+                this.showAdWatchFailedTip();
+                return false;
+            }
+        } catch (error) {
+            console.error(`任务${taskIndex}广告显示错误:`, error);
+            this.showAdWatchFailedTip();
+            return false;
+        }
+    }
+
+    /**
+     * 模拟广告观看（等待真实API替换）
+     */
+    private async simulateAdWatch(): Promise<boolean> {
+        console.log('模拟广告播放...');
+
+        return new Promise((resolve) => {
+            // 模拟广告播放时间（3秒）
+            setTimeout(() => {
+                // 模拟95%的成功率
+                const success = Math.random() > 0.05;
+                console.log(`模拟广告播放结果: ${success ? '成功' : '失败'}`);
+                resolve(success);
+            }, 3000);
+        });
+    }
+
+    /**
+     * 显示广告观看成功提示
+     */
+    private showAdWatchSuccessTip(): void {
+        console.log('广告观看成功，可以领取奖励了！');
+        // TODO: 显示UI提示，比如Toast或者弹窗
+    }
+
+    /**
+     * 显示广告观看失败提示
+     */
+    private showAdWatchFailedTip(): void {
+        console.log('广告观看失败，请重试');
+        // TODO: 显示UI提示
+    }
+
+    /**
+     * 显示奖励领取失败提示
+     */
+    private showClaimFailedTip(): void {
+        console.log('奖励领取失败，请重试');
+        // TODO: 显示UI提示
     }
 }

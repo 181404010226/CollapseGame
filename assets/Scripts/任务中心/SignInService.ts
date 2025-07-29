@@ -27,18 +27,17 @@ export interface SignInCalendarResponse {
  * 活跃任务数据结构
  */
 export interface ActiveTaskData {
-    gold: number;        // 金币奖励
-    time: number;        // 任务时间（分钟）
-    status?: number;     // 任务状态：0=未完成，1=已完成
-    taskId?: string;     // 任务ID
+    time: number;    // 累计时长要求（分钟）
+    gold: number;    // 金币奖励
+    isGet: boolean;  // 是否已观看广告
 }
 
 /**
- * 活跃任务响应数据
+ * 活跃任务响应数据结构
  */
 export interface ActiveTaskResponse {
-    activeTask: ActiveTaskData | null;
-    taskMap: ActiveTaskData[];
+    activeTask: any;              // 当前活跃任务（可能为null）
+    taskMap: ActiveTaskData[];    // 任务列表数组
 }
 
 /**

@@ -257,45 +257,68 @@ export class GameProgressManager extends Component {
      */
     private async restoreSceneItemsState(): Promise<void> {
         try {
-            log('GameProgressManager: 开始恢复场景中的物品状态...');
-            
             const scene = director.getScene();
             if (!scene) {
-                warn('GameProgressManager: 当前场景不存在，跳过物品状态恢复');
+                console.warn('GameProgressManager: 当前场景为空，跳过物品状态恢复');
                 return;
             }
 
-            // 查找场景中的 ItemDropGame 组件
-            const components = scene.getComponentsInChildren(Component);
-            let foundItemDropGame = false;
-            
-            for (const comp of components) {
-                if (comp.constructor.name === 'ItemDropGame') {
-                    const itemDropGame = comp as any;
-                    foundItemDropGame = true;
-                    
-                    if (typeof itemDropGame.tryRestoreSceneState === 'function') {
-                        log('GameProgressManager: 找到 ItemDropGame 组件，触发场景状态恢复...');
-                        
-                        // 等待一小段时间确保 ItemDropGame 完全初始化
-                        await new Promise(resolve => setTimeout(resolve, 200));
-                        
-                        // 手动调用场景状态恢复
-                        itemDropGame.tryRestoreSceneState();
-                        log('GameProgressManager: 场景物品状态恢复已触发');
-                    } else {
-                        warn('GameProgressManager: ItemDropGame 组件缺少 tryRestoreSceneState 方法');
+            // 延迟一下，确保场景完全加载
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            // 安全地获取所有组件
+            let allComponents;
+            try {
+                allComponents = scene.getComponentsInChildren(Component);
+            } catch (error) {
+                console.warn('GameProgressManager: 获取场景组件失败:', error);
+                return;
+            }
+
+            if (!allComponents || !Array.isArray(allComponents) || allComponents.length === 0) {
+                console.log('GameProgressManager: 场景中没有找到组件');
+                return;
+            }
+
+            // 安全地过滤 ItemDropGame 组件
+            const itemDropGames = allComponents.filter(comp => {
+                try {
+                    return comp && 
+                           comp.node && 
+                           comp.node.isValid && 
+                           comp.constructor && 
+                           comp.constructor.name === 'ItemDropGame';
+                } catch (error) {
+                    console.warn('GameProgressManager: 检查组件类型时出错:', error);
+                    return false;
+                }
+            });
+
+            if (!itemDropGames || itemDropGames.length === 0) {
+                console.log('GameProgressManager: 没有找到 ItemDropGame 组件');
+                return;
+            }
+
+            console.log(`GameProgressManager: 找到 ${itemDropGames.length} 个ItemDropGame组件`);
+
+            // 安全地调用恢复方法
+            for (const itemDropGame of itemDropGames) {
+                try {
+                    if (itemDropGame && 
+                        itemDropGame.node && 
+                        itemDropGame.node.isValid && 
+                        typeof (itemDropGame as any).unifiedDataRestore === 'function') {
+                        console.log('GameProgressManager: 触发ItemDropGame的统一数据恢复...');
+                        (itemDropGame as any).unifiedDataRestore();
                     }
-                    break;
+                } catch (error) {
+                    console.warn('GameProgressManager: ItemDropGame数据恢复失败:', error);
                 }
             }
-            
-            if (!foundItemDropGame) {
-                log('GameProgressManager: 当前场景中没有找到 ItemDropGame 组件，跳过物品状态恢复');
-            }
-            
+
+            console.log('GameProgressManager: 场景物品状态恢复完成');
         } catch (error) {
-            warn('GameProgressManager: 恢复场景物品状态时发生错误:', error);
+            console.warn('GameProgressManager: 恢复场景物品状态时发生错误:', error);
         }
     }
 
@@ -330,64 +353,105 @@ export class GameProgressManager extends Component {
     }
 
     /**
-     * 统一的游戏数据同步和恢复方法
-     * 不管是登录后进入首页还是其他方式返回首页，都使用这个方法
+     * 统一的游戏数据同步和恢复
      */
     public static async syncAndRestoreGameData(): Promise<void> {
         try {
-            log('GameProgressManager: 开始统一的游戏数据同步和恢复...');
+            console.log('GameProgressManager: 开始统一的游戏数据同步和恢复...');
             
             const scene = director.getScene();
             if (!scene) {
-                warn('GameProgressManager: 当前场景不存在，跳过数据同步');
+                console.warn('GameProgressManager: 当前场景为空，跳过数据同步');
                 return;
             }
 
-            // 1. 先初始化所有GameProgressManager
-            await GameProgressManager.initializeAllInScene();
+            console.log(`GameProgressManager: 当前场景: ${scene.name}`);
 
-            // 2. 获取主要的GameProgressManager实例
-            const managers = scene.getComponentsInChildren(GameProgressManager);
-            const primaryManager = managers[0];
-            
+            // 1. 查找主要的GameProgressManager实例
+            const primaryManager = scene.getComponentInChildren(GameProgressManager);
             if (!primaryManager) {
-                warn('GameProgressManager: 没有找到GameProgressManager实例');
+                console.warn('GameProgressManager: 当前场景中没有找到GameProgressManager组件');
                 return;
             }
 
-            // 3. 如果用户已登录，同步服务端数据
-            const userData = ApiConfig.getUserData();
-            if (userData && userData.access_token) {
-                log('GameProgressManager: 检测到用户已登录，开始同步服务端数据...');
-                try {
+            // 2. 初始化游戏进度
+            await primaryManager.initializeGameProgress();
+
+            // 3. 安全地检查用户数据
+            try {
+                const userData = ApiConfig.getUserData();
+                if (userData && userData.access_token) {
+                    console.log('GameProgressManager: 检测到用户已登录，开始同步服务端数据...');
                     await primaryManager.loadServerProgress();
-                    log('GameProgressManager: 服务端数据同步成功');
-                } catch (error) {
-                    warn('GameProgressManager: 服务端数据同步失败，使用本地数据:', error);
+                    console.log('GameProgressManager: 服务端数据同步成功');
+                } else {
+                    console.log('GameProgressManager: 用户未登录，跳过服务端数据同步');
                 }
-            } else {
-                log('GameProgressManager: 用户未登录，跳过服务端数据同步');
+            } catch (error) {
+                console.warn('GameProgressManager: 服务端数据同步失败，使用本地数据:', error);
             }
 
             // 4. 恢复场景中的物品状态
             await primaryManager.restoreSceneItemsState();
 
-            // 5. 通知所有ItemDropGame组件进行数据恢复
-            const itemDropGames = scene.getComponentsInChildren(Component).filter(comp => 
-                comp.constructor.name === 'ItemDropGame'
-            );
-            
-            for (const itemDropGame of itemDropGames) {
-                if (typeof (itemDropGame as any).unifiedDataRestore === 'function') {
-                    log('GameProgressManager: 触发ItemDropGame的统一数据恢复...');
-                    (itemDropGame as any).unifiedDataRestore();
-                }
-            }
+            // 5. 安全地通知所有ItemDropGame组件进行数据恢复
+            await this.safeNotifyItemDropGames(scene);
 
-            log('GameProgressManager: 统一的游戏数据同步和恢复完成');
+            console.log('GameProgressManager: 统一的游戏数据同步和恢复完成');
             
         } catch (error) {
-            warn('GameProgressManager: 统一数据同步和恢复失败:', error);
+            console.error('GameProgressManager: 统一数据同步和恢复失败:', error);
+        }
+    }
+
+    /**
+     * 安全地通知ItemDropGame组件
+     */
+    private static async safeNotifyItemDropGames(scene: any): Promise<void> {
+        try {
+            // 延迟一下，确保场景完全稳定
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            const allComponents = scene.getComponentsInChildren(Component);
+            if (!allComponents || !Array.isArray(allComponents) || allComponents.length === 0) {
+                console.log('GameProgressManager: 场景中没有找到组件或组件列表为空');
+                return;
+            }
+
+            const itemDropGames = allComponents.filter(comp => {
+                try {
+                    return comp && 
+                           comp.node && 
+                           comp.node.isValid && 
+                           comp.constructor && 
+                           comp.constructor.name === 'ItemDropGame';
+                } catch (error) {
+                    return false;
+                }
+            });
+            
+            if (itemDropGames.length === 0) {
+                console.log('GameProgressManager: 没有找到有效的ItemDropGame组件');
+                return;
+            }
+
+            console.log(`GameProgressManager: 找到 ${itemDropGames.length} 个ItemDropGame组件`);
+            
+            for (const itemDropGame of itemDropGames) {
+                try {
+                    if (itemDropGame && 
+                        itemDropGame.node && 
+                        itemDropGame.node.isValid && 
+                        typeof (itemDropGame as any).unifiedDataRestore === 'function') {
+                        console.log('GameProgressManager: 触发ItemDropGame的统一数据恢复...');
+                        (itemDropGame as any).unifiedDataRestore();
+                    }
+                } catch (error) {
+                    console.warn('GameProgressManager: ItemDropGame数据恢复失败:', error);
+                }
+            }
+        } catch (error) {
+            console.warn('GameProgressManager: 通知ItemDropGame组件时出错:', error);
         }
     }
 

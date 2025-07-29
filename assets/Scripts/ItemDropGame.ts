@@ -1206,26 +1206,39 @@ export class ItemDropGame extends Component {
 
     /**
      * 统一的数据恢复方法
-     * 不管是登录后进入首页还是其他方式返回首页，都使用这个方法
      */
     public unifiedDataRestore(): void {
         log('ItemDropGame: 开始统一数据恢复流程...');
         
         try {
-            // 1. 确保进度管理器存在
+            // 1. 安全地确保进度管理器存在
             if (!this.progressManager) {
-                this.progressManager = director.getScene()?.getComponentInChildren(GameProgressManager);
+                const scene = director.getScene();
+                if (scene) {
+                    this.progressManager = scene.getComponentInChildren(GameProgressManager);
+                }
+                
                 if (!this.progressManager) {
                     warn('ItemDropGame: 无法找到GameProgressManager，跳过数据恢复');
                     return;
                 }
             }
 
-            // 2. 执行场景状态恢复
-            this.tryRestoreSceneState();
+            // 2. 安全地执行场景状态恢复
+            try {
+                this.tryRestoreSceneState();
+            } catch (error) {
+                warn('ItemDropGame: 场景状态恢复失败:', error);
+            }
 
-            // 3. 确保UI显示是最新的
-            GameProgressManager.updateAllDisplays();
+            // 3. 安全地确保UI显示是最新的
+            try {
+                if (GameProgressManager && typeof GameProgressManager.updateAllDisplays === 'function') {
+                    GameProgressManager.updateAllDisplays();
+                }
+            } catch (error) {
+                warn('ItemDropGame: 更新显示失败:', error);
+            }
 
             log('ItemDropGame: 统一数据恢复完成');
             

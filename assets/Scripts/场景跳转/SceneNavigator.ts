@@ -136,25 +136,36 @@ export class SceneNavigator extends Component {
         );
     }
 
-    /**
-     * 在场景跳转后初始化游戏进度管理器
-     */
-    private async initializeGameProgressAfterNavigation(): Promise<void> {
-        try {
-            console.log('SceneNavigator: 开始初始化跳转后场景中的游戏进度管理器...');
-            
-            // 等待一段时间确保场景完全加载
-            await new Promise(resolve => setTimeout(resolve, 150));
-            
-            // 使用统一的数据同步和恢复方法
-            await GameProgressManager.syncAndRestoreGameData();
-            
-            console.log('SceneNavigator: 游戏进度管理器初始化完成');
-            
-        } catch (error) {
-            console.error('SceneNavigator: 游戏进度管理器初始化失败:', error);
+/**
+ * 在场景跳转后初始化游戏进度管理器
+ */
+private async initializeGameProgressAfterNavigation(): Promise<void> {
+    try {
+        console.log('SceneNavigator: 开始场景跳转后的游戏进度初始化...');
+        
+        // 增加延迟，确保场景完全加载
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // 检查场景是否仍然有效
+        const currentScene = director.getScene();
+        if (!currentScene) {
+            console.warn('SceneNavigator: 场景初始化时当前场景为空');
+            return;
         }
+        
+        if (currentScene.name !== this.targetSceneName) {
+            console.warn(`SceneNavigator: 场景名称不匹配，期望: ${this.targetSceneName}, 实际: ${currentScene.name}`);
+            return;
+        }
+        
+        // 安全地执行数据同步
+        await GameProgressManager.syncAndRestoreGameData();
+        
+        console.log('SceneNavigator: 游戏进度初始化完成');
+    } catch (error) {
+        console.error('SceneNavigator: 场景跳转后初始化失败:', error);
     }
+}
 
 
 
