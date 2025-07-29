@@ -27,10 +27,10 @@ export class RewardEffectController extends Component {
     // 红包和金币生成配置
     @property({ type: [Number], displayName: "每级红包数量", tooltip: "每个等级合成时生成的红包数量" })
     public redPacketCountPerLevel: number[] = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7];
-    
+
     @property({ type: [Number], displayName: "每级金币数量", tooltip: "每个等级合成时生成的金币数量" })
     public goldCoinCountPerLevel: number[] = [2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 12, 12, 14];
-    
+
 
     // 动画相关常量 -----------------------------------------
     private readonly REWARD_SPAWN_RADIUS = 100;
@@ -43,8 +43,9 @@ export class RewardEffectController extends Component {
      * 在指定世界坐标生成红包/金币奖励
      * @param level 合成后的等级，用于查表确定数量
      * @param synthesisWorldPos 合成所在的世界坐标
+     * @param onComplete 所有奖励动画完成后的回调
      */
-    public generateRewards(level: number, synthesisWorldPos: Vec3): void {
+    public generateRewards(level: number, synthesisWorldPos: Vec3, onComplete?: () => void): void {
         if (!this.gameArea) {
             console.warn('RewardEffectController: gameArea 未绑定');
             return;
@@ -52,9 +53,18 @@ export class RewardEffectController extends Component {
 
         const redCount = this.getRedPacketCount(level);
         const goldCount = this.getGoldCoinCount(level);
+        const totalCount = redCount + goldCount;
+        let completedCount = 0;
 
-        this.generateRedPackets(redCount, synthesisWorldPos);
-        this.generateGoldCoins(goldCount, synthesisWorldPos);
+        const onItemComplete = () => {
+            completedCount++;
+            if (completedCount >= totalCount && onComplete) {
+                onComplete();
+            }
+        };
+
+        this.generateRedPackets(redCount, synthesisWorldPos, onItemComplete);
+        this.generateGoldCoins(goldCount, synthesisWorldPos, onItemComplete);
     }
 
     /**
@@ -86,22 +96,20 @@ export class RewardEffectController extends Component {
         if (level < 0 || level >= this.goldCoinCountPerLevel.length) return 2;
         return this.goldCoinCountPerLevel[level];
     }
-
-    private generateRedPackets(count: number, centerWorldPos: Vec3): void {
+    private generateRedPackets(count: number, centerWorldPos: Vec3, onItemComplete?: () => void): void {
         if (!this.redPacketPrefab || !this.redPacketNode) return;
         for (let i = 0; i < count; i++) {
-            this.createRewardItem(this.redPacketPrefab, centerWorldPos, this.redPacketNode);
+            this.createRewardItem(this.redPacketPrefab, centerWorldPos, this.redPacketNode, onItemComplete);
         }
     }
-
-    private generateGoldCoins(count: number, centerWorldPos: Vec3): void {
+    private generateGoldCoins(count: number, centerWorldPos: Vec3, onItemComplete?: () => void): void {
         if (!this.goldCoinPrefab || !this.goldCoinNode) return;
         for (let i = 0; i < count; i++) {
-            this.createRewardItem(this.goldCoinPrefab, centerWorldPos, this.goldCoinNode);
+            this.createRewardItem(this.goldCoinPrefab, centerWorldPos, this.goldCoinNode, onItemComplete);
         }
     }
 
-    private createRewardItem(prefab: Prefab, centerWorldPos: Vec3, targetNode: Node): void {
+    private createRewardItem(prefab: Prefab, centerWorldPos: Vec3, targetNode: Node, onComplete?: () => void): void {
         const reward = instantiate(prefab);
         this.gameArea.addChild(reward);
 
@@ -124,6 +132,9 @@ export class RewardEffectController extends Component {
             .call(() => {
                 reward.destroy();
                 log(`Reward collected -> ${prefab.name}`);
+                if (onComplete) {
+                    onComplete();
+                }
             })
             .start();
     }
