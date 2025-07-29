@@ -68,7 +68,7 @@ export class AudioManager extends Component {
     private updateCurrentSceneName(): void {
         const currentScene = director.getScene();
         this.currentSceneName = currentScene ? currentScene.name : '';
-        console.log(`AudioManager: 当前场景更新为: ${this.currentSceneName}`);
+        // console.log(`AudioManager: 当前场景更新为: ${this.currentSceneName}`);
     }
 
     /**
@@ -78,7 +78,7 @@ export class AudioManager extends Component {
         // 优先使用手动跟踪的场景名
         if (this.currentSceneName) {
             const allowed = this.allowedScenes.includes(this.currentSceneName);
-            console.log(`当前场景: ${this.currentSceneName}, 允许的场景: ${this.allowedScenes.join(', ')}, 是否允许: ${allowed}`);
+            // console.log(`当前场景: ${this.currentSceneName}, 允许的场景: ${this.allowedScenes.join(', ')}, 是否允许: ${allowed}`);
             return allowed;
         }
 
@@ -91,7 +91,7 @@ export class AudioManager extends Component {
 
         const sceneName = currentScene.name;
         const allowed = this.allowedScenes.includes(sceneName);
-        console.log(`当前场景(备用): ${sceneName}, 允许的场景: ${this.allowedScenes.join(', ')}, 是否允许: ${allowed}`);
+        // console.log(`当前场景(备用): ${sceneName}, 允许的场景: ${this.allowedScenes.join(', ')}, 是否允许: ${allowed}`);
         return allowed;
     }
 

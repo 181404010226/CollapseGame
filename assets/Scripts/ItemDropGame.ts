@@ -1,9 +1,10 @@
-import { _decorator, Component, Node, Prefab, RigidBody2D, PhysicsSystem2D, Contact2DType, Collider2D, Vec3, input, Input, EventTouch, instantiate, Vec2, director, Camera, Canvas, UITransform, tween, sp, UIOpacity, log, warn } from 'cc';
+import { _decorator, native,Component, Node, Prefab, RigidBody2D, PhysicsSystem2D, Contact2DType, Collider2D, Vec3, input, Input, EventTouch, instantiate, Vec2, director, Camera, Canvas, UITransform, tween, sp, UIOpacity, log, warn } from 'cc';
 import { ItemData } from './ItemData';
 import { EffectContainerPool } from './EffectContainerPool';
 import { GameProgressManager } from './GameProgressManager';
 import { RewardEffectController } from './RewardEffectController';
 import { AudioManager } from './音乐/AudioManager';
+import { ApiConfig } from '../API/ApiConfig';
 const { ccclass, property } = _decorator;
 
 /**
@@ -688,6 +689,9 @@ export class ItemDropGame extends Component {
         // 记录合成奖励到进度管理器
         //this.progressManager?.recordComposeReward(goldReward, redBagReward, isMaxLevel);
 
+        // 检查是否需要播放激励视频广告
+        this.checkAndShowRewardAd();
+
         // 检查并增加抽奖次数（当合成对应等级物品时）
         if (this.progressManager) {
             this.progressManager.checkAndAddLottery(newLevel).then((added) => {
@@ -1164,7 +1168,7 @@ export class ItemDropGame extends Component {
             version: '1.0.0'
         };
 
-        log(`ItemDropGame: 保存场景状态，物品数量: ${items.length}`);
+        // log(`ItemDropGame: 保存场景状态，物品数量: ${items.length}`);
         return sceneData;
     }
 
@@ -1334,6 +1338,47 @@ export class ItemDropGame extends Component {
      */
     public getCurrentSceneData(): GameSceneData {
         return this.saveSceneState();
+    }
+
+    /**
+     * 检查并播放激励视频广告
+     */
+    private checkAndShowRewardAd(): void {
+        // 检查是否需要播放激励视频广告
+        if (ApiConfig.shouldShowRewardAd()) {
+            const countdown = ApiConfig.getRewardAdCountdown();
+            log(`ItemDropGame: 达到30次合成，准备播放激励视频广告，倒计时: ${countdown}`);
+            
+            // 调用原生方法加载激励视频广告
+            this.loadRewardAd();
+            
+            // 重置计数器
+            ApiConfig.resetRewardAdCounter();
+        } else {
+            const countdown = ApiConfig.getRewardAdCountdown();
+            log(`ItemDropGame: 合成计数中，距离播放激励视频广告还需: ${countdown} 次`);
+        }
+    }
+    
+    /**
+     * 调用原生方法加载激励视频广告
+     */
+    private loadRewardAd(): void {
+        if (typeof native !== 'undefined' && native.reflection) {
+            try {
+                // 直接调用静态方法加载激励视频广告
+                native.reflection.callStaticMethod(
+                    'com/schanyin/tgcf/PangleAdManager',
+                    'loadRewardAdStatic',
+                    '()V'
+                );
+                log('ItemDropGame: 已调用原生方法加载激励视频广告');
+            } catch (error) {
+                warn('ItemDropGame: 调用原生激励视频广告方法失败:', error);
+            }
+        } else {
+            log('ItemDropGame: 非原生环境，跳过激励视频广告调用');
+        }
     }
 
     /**

@@ -94,7 +94,7 @@ export class GameProgressManager extends Component {
     @property({ type: Label, tooltip: '合成财神数量 Label' })
     caishenLabel: Label = null;
 
-    @property({ type: Label, tooltip: '剩余抽奖次数 Label' })
+    @property({ type: Label, tooltip: '播放激励视频的剩余合成次数 Label' })
     drawNumLabel: Label = null;
 
     @property({ type: LuckyDrawButton, tooltip: '抽奖按钮组件引用' })
@@ -222,6 +222,9 @@ export class GameProgressManager extends Component {
             //初始化音频管理器并播放背景音乐
             this.initAudioManager();
             
+            // 设置激励视频广告事件监听
+            this.setupRewardAdEventListeners();
+            
             log('GameProgressManager: 游戏进度初始化完成');
 
             //
@@ -252,6 +255,105 @@ export class GameProgressManager extends Component {
             audioManager.playHomeBGM();
         }
     }
+    
+    // ======== 激励视频广告事件监听 ========
+    /**
+     * 设置激励视频广告事件监听
+     */
+    private setupRewardAdEventListeners(): void {
+        try {
+            // 监听激励视频广告加载结果
+            director.on('pangleRewardAdLoadResult', this.onRewardAdLoadResult, this);
+            
+            // 监听激励视频广告展示结果
+            director.on('pangleRewardAdShowResult', this.onRewardAdShowResult, this);
+            
+            // 监听激励视频广告关闭
+            director.on('pangleRewardAdClose', this.onRewardAdClose, this);
+            
+            // 监听激励视频广告奖励
+            director.on('pangleRewardAdReward', this.onRewardAdReward, this);
+            
+            log('GameProgressManager: 激励视频广告事件监听器设置完成');
+        } catch (error) {
+            warn('GameProgressManager: 设置激励视频广告事件监听器失败:', error);
+        }
+    }
+    
+    /**
+     * 激励视频广告加载结果回调
+     */
+    private onRewardAdLoadResult(data: string): void {
+        try {
+            const result = JSON.parse(data);
+            if (result.success) {
+                log('GameProgressManager: 激励视频广告加载成功:', result.message);
+            } else {
+                warn('GameProgressManager: 激励视频广告加载失败:', result.message);
+            }
+        } catch (error) {
+            warn('GameProgressManager: 解析激励视频广告加载结果失败:', error);
+        }
+    }
+    
+    /**
+     * 激励视频广告展示结果回调
+     */
+    private onRewardAdShowResult(data: string): void {
+        try {
+            const result = JSON.parse(data);
+            if (result.success) {
+                log('GameProgressManager: 激励视频广告展示成功:', result.message);
+            } else {
+                warn('GameProgressManager: 激励视频广告展示失败:', result.message);
+            }
+        } catch (error) {
+            warn('GameProgressManager: 解析激励视频广告展示结果失败:', error);
+        }
+    }
+    
+    /**
+     * 激励视频广告关闭回调
+     */
+    private onRewardAdClose(data: string): void {
+        try {
+            log('GameProgressManager: 激励视频广告已关闭');
+            // 这里可以添加广告关闭后的逻辑
+        } catch (error) {
+            warn('GameProgressManager: 处理激励视频广告关闭事件失败:', error);
+        }
+    }
+    
+    /**
+     * 激励视频广告奖励回调
+     */
+    private onRewardAdReward(data: string): void {
+        try {
+            const result = JSON.parse(data);
+            if (result.isValid) {
+                log('GameProgressManager: 激励视频广告奖励验证通过，奖励类型:', result.rewardType);
+                
+                // 更新最后播放激励视频的时间
+                ApiConfig.resetRewardAdCounter();
+                
+                // 这里可以添加额外的奖励逻辑，比如给玩家额外的金币或红包
+                // 例如：给玩家额外奖励
+                const bonusGold = 100; // 额外奖励100金币
+                const bonusRedBag = 10; // 额外奖励10红包
+                ApiConfig.addComposeReward(bonusGold, bonusRedBag, 0);
+                
+                // 更新UI显示
+                this.updateDisplay();
+                
+                log(`GameProgressManager: 激励视频广告奖励已发放 - 金币:${bonusGold}, 红包:${bonusRedBag}`);
+            } else {
+                warn('GameProgressManager: 激励视频广告奖励验证失败:', result.message);
+            }
+        } catch (error) {
+            warn('GameProgressManager: 处理激励视频广告奖励失败:', error);
+        }
+    }
+    
     /**
      * 恢复场景中的物品状态
      */
@@ -534,7 +636,7 @@ export class GameProgressManager extends Component {
                             const sceneData = itemDropGame.getCurrentSceneData();
                             if (sceneData) {
                                 ApiConfig.updateLocalSceneData(sceneData);
-                                log('GameProgressManager: 本地场景数据已同步保存');
+                                // log('GameProgressManager: 本地场景数据已同步保存');
                             }
                         }
                         break;
@@ -546,7 +648,7 @@ export class GameProgressManager extends Component {
         }
         
         ApiConfig.saveLocalProgressToStorage();
-        log('GameProgressManager: 本地进度数据已保存');
+        // log('GameProgressManager: 本地进度数据已保存');
     }
 
     // ======== 服务器交互 ========
@@ -899,8 +1001,9 @@ export class GameProgressManager extends Component {
             this.caishenLabel.string = this.formatNumber(totalWealth);
         }
         if (this.drawNumLabel) {
-            // 显示剩余抽奖次数
-            this.drawNumLabel.string = progress.drawNum.toString();
+            // 显示播放激励视频的剩余合成次数
+            const countdown = ApiConfig.getRewardAdCountdown();
+            this.drawNumLabel.string = countdown.toString();
         }
     }
 

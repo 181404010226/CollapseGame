@@ -71,6 +71,10 @@ export interface LocalGameProgress {
     // 合成统计
     times: number;             // 合成次数
     
+    // 激励视频广告相关
+    rewardAdCounter: number;   // 合成计数器（30个一循环）
+    lastRewardAdTime: number;  // 上次播放激励视频时间
+    
     // 抽奖相关
     nextLotteryLayer: number;  // 下次抽奖次数下发层数
     
@@ -380,6 +384,8 @@ export class ApiConfig {
             drawNum: 0,
             progress: '',
             times: 0,
+            rewardAdCounter: 0,
+            lastRewardAdTime: 0,
             nextLotteryLayer: 1,
             localSceneData: null,
             serverSceneData: null,
@@ -493,7 +499,47 @@ export class ApiConfig {
             this.LOCAL_GAME_PROGRESS.wealthNum += wealthReward;
             this.LOCAL_GAME_PROGRESS.times += 1;
             
+            // 增加激励视频计数器
+            this.LOCAL_GAME_PROGRESS.rewardAdCounter += 1;
+            
             // 不立即保存到本地存储，由定时器统一保存
+        }
+    }
+
+    /**
+     * 检查是否需要播放激励视频广告
+     * @returns true表示需要播放广告
+     */
+    public static shouldShowRewardAd(): boolean {
+        if (!this.LOCAL_GAME_PROGRESS) {
+            return false;
+        }
+        return this.LOCAL_GAME_PROGRESS.rewardAdCounter >= 30;
+    }
+
+    /**
+     * 获取激励视频倒计时
+     * @returns 距离下次播放广告还需要多少次合成
+     */
+    public static getRewardAdCountdown(): number {
+        if (!this.LOCAL_GAME_PROGRESS) {
+            return 30;
+        }
+        return Math.max(0, 30 - this.LOCAL_GAME_PROGRESS.rewardAdCounter);
+    }
+
+    /**
+     * 重置激励视频计数器（播放广告后调用）
+     */
+    public static resetRewardAdCounter(): void {
+        if (!this.LOCAL_GAME_PROGRESS) {
+            this.initializeDefaultProgress();
+        }
+        
+        if (this.LOCAL_GAME_PROGRESS) {
+            this.LOCAL_GAME_PROGRESS.rewardAdCounter = 0;
+            this.LOCAL_GAME_PROGRESS.lastRewardAdTime = Date.now();
+            this.saveLocalProgressToStorage();
         }
     }
 
