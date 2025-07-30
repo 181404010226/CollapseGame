@@ -212,8 +212,10 @@ export class PopupButtonBinder extends Component {
     }
 
     onDestroy() {
-        this.node.off(Node.EventType.TOUCH_END, this.onClick, this);
+        if (this.node) {
+            this.node.off(Node.EventType.TOUCH_END, this.onClick, this);
+        }
         this.unscheduleAllCallbacks();
         this.cleanup();
     }
-} 
+}

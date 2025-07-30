@@ -50,7 +50,7 @@ export class LianyunshanReporter extends Component {
     
     onDestroy() {
         // 移除按钮点击事件监听
-        if (this.targetButton) {
+        if (this.targetButton && this.targetButton.node) {
             this.targetButton.node.off(Button.EventType.CLICK, this.onButtonClick, this);
         }
     }

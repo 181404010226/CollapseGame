@@ -38,6 +38,8 @@ export class PopupHider extends Component {
 
     onDestroy() {
         // 移除事件监听，防止内存泄漏
-        this.node.off(Button.EventType.CLICK, this.hidePopup, this);
+        if (this.node) {
+            this.node.off(Button.EventType.CLICK, this.hidePopup, this);
+        }
     }
-} 
+}

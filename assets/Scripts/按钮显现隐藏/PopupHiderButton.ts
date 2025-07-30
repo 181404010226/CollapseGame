@@ -122,7 +122,9 @@ export class PopupHiderButton extends Component {
      */
     onDestroy() {
         // 移除点击事件监听
-        this.node.off(Node.EventType.TOUCH_END, this.onButtonClick, this);
+        if (this.node) {
+            this.node.off(Node.EventType.TOUCH_END, this.onButtonClick, this);
+        }
         console.log('弹窗隐藏按钮事件监听器已移除');
     }
-} 
+}

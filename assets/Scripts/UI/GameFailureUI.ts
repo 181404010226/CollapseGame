@@ -17,11 +17,11 @@ export class GameFailureUI extends Component {
     }
     
     private setupButtons(): void {
-        if (this.restartButton) {
+        if (this.restartButton && this.restartButton.node) {
             this.restartButton.node.on(Button.EventType.CLICK, this.onRestartClick, this);
         }
         
-        if (this.closeButton) {
+        if (this.closeButton && this.closeButton.node) {
             this.closeButton.node.on(Button.EventType.CLICK, this.onCloseClick, this);
         }
     }
@@ -51,10 +51,10 @@ export class GameFailureUI extends Component {
     }
     
     onDestroy(): void {
-        if (this.restartButton) {
+        if (this.restartButton && this.restartButton.node) {
             this.restartButton.node.off(Button.EventType.CLICK, this.onRestartClick, this);
         }
-        if (this.closeButton) {
+        if (this.closeButton && this.closeButton.node) {
             this.closeButton.node.off(Button.EventType.CLICK, this.onCloseClick, this);
         }
     }

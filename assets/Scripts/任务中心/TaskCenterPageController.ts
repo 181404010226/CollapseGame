@@ -389,7 +389,9 @@ export class TaskCenterPageController extends Component {
         this.setButtonBackground(button.node, config.spritePath);
 
         // 清除之前的事件监听
-        button.node.off(Button.EventType.CLICK);
+        if (button && button.node) {
+            button.node.off(Button.EventType.CLICK);
+        }
 
         // 根据状态绑定事件
         this.bindButtonEvent(button, state, taskIndex, taskData);
