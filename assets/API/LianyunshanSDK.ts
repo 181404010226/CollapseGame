@@ -43,8 +43,34 @@ export class LianyunshanSDK extends Component implements INativeMessageHandler {
                 this.reportRiskDetection((success, error) => {
                     if (success) {
                         log('[LianyunshanSDK] 启动后风控信息上报成功');
+                        
+                        // 风控信息上报成功后，自动上报注册场景
+                        this.scheduleOnce(() => {
+                            this.reportScene('register').then((reportSuccess) => {
+                                if (reportSuccess) {
+                                    log('[LianyunshanSDK] SDK启动时注册场景上报成功');
+                                } else {
+                                    warn('[LianyunshanSDK] SDK启动时注册场景上报失败');
+                                }
+                            }).catch((reportError) => {
+                                warn('[LianyunshanSDK] SDK启动时注册场景上报异常:', reportError);
+                            });
+                        }, 0.5); // 延迟0.5秒确保风控上报完全完成
                     } else {
                         warn('[LianyunshanSDK] 启动后风控信息上报失败:', error);
+                        
+                        // 即使风控上报失败，也尝试上报注册场景
+                        this.scheduleOnce(() => {
+                            this.reportScene('register').then((reportSuccess) => {
+                                if (reportSuccess) {
+                                    log('[LianyunshanSDK] SDK启动时注册场景上报成功（风控失败后重试）');
+                                } else {
+                                    warn('[LianyunshanSDK] SDK启动时注册场景上报失败（风控失败后重试）');
+                                }
+                            }).catch((reportError) => {
+                                warn('[LianyunshanSDK] SDK启动时注册场景上报异常（风控失败后重试）:', reportError);
+                            });
+                        }, 0.5);
                     }
                 });
             }, 1.0);
