@@ -24,12 +24,15 @@
       },
       {
         "__id__": 96
+      },
+      {
+        "__id__": 99
       }
     ],
     "_active": true,
     "_components": [],
     "_prefab": {
-      "__id__": 98
+      "__id__": 101
     },
     "_lpos": {
       "__type__": "cc.Vec3",
@@ -60,7 +63,7 @@
     },
     "autoReleaseAssets": false,
     "_globals": {
-      "__id__": 99
+      "__id__": 102
     },
     "_id": "198334a6-2598-488a-9ffe-1af537d87dcd"
   },
@@ -3749,6 +3752,9 @@
     "_components": [
       {
         "__id__": 97
+      },
+      {
+        "__id__": 98
       }
     ],
     "_prefab": null,
@@ -3794,6 +3800,75 @@
     "_id": "43mqMDEQhDf5SyCbAewmYa"
   },
   {
+    "__type__": "d3ad3pwSY9Hl7+RYqT+H4Dh",
+    "_name": "",
+    "_objFlags": 0,
+    "__editorExtras__": {},
+    "node": {
+      "__id__": 96
+    },
+    "_enabled": true,
+    "__prefab": null,
+    "_id": "83bL4TGo5Ke6raat3+6INQ"
+  },
+  {
+    "__type__": "cc.Node",
+    "_name": "桥接器",
+    "_objFlags": 0,
+    "__editorExtras__": {},
+    "_parent": {
+      "__id__": 1
+    },
+    "_children": [],
+    "_active": true,
+    "_components": [
+      {
+        "__id__": 100
+      }
+    ],
+    "_prefab": null,
+    "_lpos": {
+      "__type__": "cc.Vec3",
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "_lrot": {
+      "__type__": "cc.Quat",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1
+    },
+    "_lscale": {
+      "__type__": "cc.Vec3",
+      "x": 1,
+      "y": 1,
+      "z": 1
+    },
+    "_mobility": 0,
+    "_layer": 1073741824,
+    "_euler": {
+      "__type__": "cc.Vec3",
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "_id": "28IuLVp71DdZBrnVeNTPfu"
+  },
+  {
+    "__type__": "ba3c87uVVNH0ZMPkj/aOxPy",
+    "_name": "",
+    "_objFlags": 0,
+    "__editorExtras__": {},
+    "node": {
+      "__id__": 99
+    },
+    "_enabled": true,
+    "__prefab": null,
+    "_id": "63c8yUHOlKWoV5tjSGkYw1"
+  },
+  {
     "__type__": "cc.PrefabInfo",
     "root": null,
     "asset": null,
@@ -3804,28 +3879,28 @@
   {
     "__type__": "cc.SceneGlobals",
     "ambient": {
-      "__id__": 100
-    },
-    "shadows": {
-      "__id__": 101
-    },
-    "_skybox": {
-      "__id__": 102
-    },
-    "fog": {
       "__id__": 103
     },
-    "octree": {
+    "shadows": {
       "__id__": 104
     },
-    "skin": {
+    "_skybox": {
       "__id__": 105
     },
-    "lightProbeInfo": {
+    "fog": {
       "__id__": 106
     },
-    "postSettings": {
+    "octree": {
       "__id__": 107
+    },
+    "skin": {
+      "__id__": 108
+    },
+    "lightProbeInfo": {
+      "__id__": 109
+    },
+    "postSettings": {
+      "__id__": 110
     },
     "bakedWithStationaryMainLight": false,
     "bakedWithHighpLightmap": false

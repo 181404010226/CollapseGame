@@ -1,4 +1,4 @@
-import { _decorator, Component, log, warn, director } from 'cc';
+import { _decorator, Component, log, warn, director, assetManager, ImageAsset, Texture2D, SpriteFrame } from 'cc';
 import { native } from 'cc';
 import { NativeBridge, INativeMessageHandler } from './NativeBridgeManager';
 import { ApiConfig } from './ApiConfig';
@@ -14,6 +14,9 @@ export interface WeChatLoginResult {
     client_id?: string;
     error?: string;
     code?: string; // 微信返回的code
+    wechatNickname?: string; // 微信昵称
+    wechatAvatar?: string; // 微信头像URL
+    localAvatarSpriteFrame?: SpriteFrame; // 本地保存的头像SpriteFrame
 }
 
 // 微信授权结果接口（从原生端返回）
@@ -325,6 +328,88 @@ export class WeChatLogin extends Component implements INativeMessageHandler {
      }
 
      /**
+     * 下载并保存微信头像
+     */
+    private async downloadAndSaveAvatar(avatarUrl: string): Promise<SpriteFrame | null> {
+        if (!avatarUrl || avatarUrl.trim() === '') {
+            log('头像URL为空，跳过下载');
+            return null;
+        }
+
+        try {
+            log(`开始下载微信头像: ${avatarUrl}`);
+            
+            return new Promise<SpriteFrame | null>((resolve) => {
+                assetManager.loadRemote<ImageAsset>(avatarUrl, (err, imageAsset) => {
+                    if (err) {
+                        warn('下载微信头像失败:', err);
+                        resolve(null);
+                        return;
+                    }
+                    
+                    if (!imageAsset) {
+                        warn('下载的头像ImageAsset为空');
+                        resolve(null);
+                        return;
+                    }
+                    
+                    try {
+                        // 创建纹理和精灵帧
+                        const texture = new Texture2D();
+                        texture.image = imageAsset;
+                        const spriteFrame = new SpriteFrame();
+                        spriteFrame.texture = texture;
+                        
+                        log('微信头像下载并转换成功');
+                        
+                        // 保存到本地存储（可选）
+                        this.saveAvatarToLocalStorage(avatarUrl, spriteFrame);
+                        
+                        resolve(spriteFrame);
+                    } catch (textureError) {
+                        warn('创建头像纹理失败:', textureError);
+                        resolve(null);
+                    }
+                });
+            });
+        } catch (error) {
+            warn('下载头像过程中发生异常:', error);
+            return null;
+        }
+    }
+
+    /**
+     * 保存头像到本地存储（保存URL和时间戳）
+     */
+    private saveAvatarToLocalStorage(avatarUrl: string, spriteFrame: SpriteFrame): void {
+        try {
+            const avatarData = {
+                url: avatarUrl,
+                timestamp: Date.now()
+            };
+            localStorage.setItem('wechat_avatar_data', JSON.stringify(avatarData));
+            log('头像数据已保存到本地存储');
+        } catch (error) {
+            warn('保存头像数据到本地存储失败:', error);
+        }
+    }
+
+    /**
+     * 从本地存储获取头像数据
+     */
+    public static getSavedAvatarData(): {url: string, timestamp: number} | null {
+        try {
+            const avatarDataStr = localStorage.getItem('wechat_avatar_data');
+            if (avatarDataStr) {
+                return JSON.parse(avatarDataStr);
+            }
+        } catch (error) {
+            warn('读取本地头像数据失败:', error);
+        }
+        return null;
+    }
+
+    /**
      * 使用code调用后端API登录
      */
     private async loginWithCode(code: string, retryCount: number = 0): Promise<void> {
@@ -385,16 +470,26 @@ export class WeChatLogin extends Component implements INativeMessageHandler {
                     log(`token过期时间: ${userData.expire_in}秒`);
                     log(`client_id: ${userData.client_id}`);
                     
+                    log('>>> 开始下载微信头像 <<<');
+                    // 下载并保存头像
+                    const avatarSpriteFrame = await this.downloadAndSaveAvatar(userData.wechatAvatar);
+                    
                     log('>>> 准备调用成功回调 <<<');
-                    const successResult = {
+                    const successResult: WeChatLoginResult = {
                         success: true,
                         openid: userData.openid,
                         access_token: userData.access_token,
                         expire_in: userData.expire_in,
                         client_id: userData.client_id,
-                        code: code
+                        code: code,
+                        wechatNickname: userData.wechatNickname,
+                        wechatAvatar: userData.wechatAvatar,
+                        localAvatarSpriteFrame: avatarSpriteFrame
                     };
-                    log('成功结果对象:', successResult);
+                    log('成功结果对象:', {
+                        ...successResult,
+                        localAvatarSpriteFrame: avatarSpriteFrame ? '已下载' : '下载失败'
+                    });
                     
                     this.callLoginCallback(successResult);
                     log('>>> 成功回调调用完成 <<<');

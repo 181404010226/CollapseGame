@@ -212,6 +212,17 @@ export class NativeBridgeManager extends Component {
                     console.error('处理原生回调失败:', e);
                 }
             };
+            
+            // 设置传统的回调函数作为备用
+            (window as any).onPangleCallback = (command: string, data: string) => {
+                try {
+                    log(`收到原生回调 (window.onPangleCallback): ${command} -> ${data}`);
+                    this.routeNativeMessage(command, data);
+                } catch (e) {
+                    console.error('处理原生回调失败:', e);
+                }
+            };
+            
             log('✅ window 全局回调已注册');
         } else {
             log('❌ window 不可用');
@@ -227,6 +238,17 @@ export class NativeBridgeManager extends Component {
                     console.error('处理原生回调失败:', e);
                 }
             };
+            
+            // 设置传统的回调函数作为备用
+            (globalThis as any).onPangleCallback = (command: string, data: string) => {
+                try {
+                    log(`收到原生回调 (globalThis.onPangleCallback): ${command} -> ${data}`);
+                    this.routeNativeMessage(command, data);
+                } catch (e) {
+                    console.error('处理原生回调失败:', e);
+                }
+            };
+            
             log('✅ globalThis 回调已注册');
         } else {
             log('❌ globalThis 不可用');
@@ -239,6 +261,7 @@ export class NativeBridgeManager extends Component {
      */
     private routeNativeMessage(command: string, data: string): boolean {
         log(`=== 路由原生消息: ${command} ===`);
+        log(`当前注册的处理器数量: ${this.messageHandlers.size}`);
         
         let handled = false;
         
@@ -250,13 +273,15 @@ export class NativeBridgeManager extends Component {
                     handled = true;
                     break; // 消息被处理后停止传递
                 }
+                // 移除"未处理消息"的日志，因为这是正常的路由过程
             } catch (error) {
                 warn(`处理器 ${handlerName} 处理消息 ${command} 时发生错误:`, error);
             }
         }
         
         if (!handled) {
-            log(`未找到处理器处理消息: ${command}`);
+            warn(`未找到处理器处理消息: ${command}`);
+            log(`已注册的处理器列表: ${Array.from(this.messageHandlers.keys()).join(', ')}`);
         }
         
         return handled;

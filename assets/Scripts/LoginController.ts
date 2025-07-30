@@ -550,12 +550,13 @@ export class LoginController extends Component {
             // 构建用户数据（符合UserData接口）并保存到ApiConfig
             const userData: UserData = {
                 openid: loginResult.openid || null,
-                wechatNickname: null, // 微信登录结果中没有昵称信息
-                wechatAvatar: null,   // 微信登录结果中没有头像信息
+                wechatNickname: loginResult.wechatNickname || null, // 从登录结果获取昵称
+                wechatAvatar: loginResult.wechatAvatar || null,     // 从登录结果获取头像URL
                 isRealName: false,    // 默认为false，后续可通过其他接口获取
                 access_token: loginResult.access_token || '',
                 expire_in: loginResult.expire_in || 0,
-                client_id: loginResult.client_id || null
+                client_id: loginResult.client_id || null,
+                localAvatarSpriteFrame: loginResult.localAvatarSpriteFrame // 保存本地头像SpriteFrame
             };
             
             // 保存用户数据到 ApiConfig 供全局使用

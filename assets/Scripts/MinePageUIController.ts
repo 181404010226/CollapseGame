@@ -148,15 +148,16 @@ export class MinePageUIController extends Component {
         console.log('Received server data:', data);
         
         try {
-            // Update nickname
+            // Update nickname - 优先使用ApiConfig中的微信昵称
             if (this.nicknameLabel) {
-                this.nicknameLabel.string = data.nickname || '默认昵称';
+                const userData = ApiConfig.getUserData();
+                const nickname = userData?.wechatNickname || data.nickname || '默认昵称';
+                this.nicknameLabel.string = nickname;
             }
 
-            // Update avatar
-            if (this.avatarSprite && data.avatar) {
-                console.log('Loading remote avatar:', data.avatar);
-                this.loadRemoteAvatar(data.avatar);
+            // Update avatar - 优先使用本地保存的头像
+            if (this.avatarSprite) {
+                this.loadUserAvatar(data.avatar);
             }
 
             // Update level - 添加空值检查
@@ -194,18 +195,61 @@ export class MinePageUIController extends Component {
     }
 
     /**
-     * 安全地加载远程头像
+     * 加载用户头像 - 优先使用本地保存的头像
+     */
+    private loadUserAvatar(serverAvatarUrl?: string) {
+        try {
+            // 1. 优先使用ApiConfig中保存的本地头像SpriteFrame
+            const userData = ApiConfig.getUserData();
+            if (userData?.localAvatarSpriteFrame) {
+                console.log('使用本地保存的微信头像');
+                this.avatarSprite.spriteFrame = userData.localAvatarSpriteFrame;
+                return;
+            }
+            
+            // 2. 如果没有本地头像，但有微信头像URL，尝试加载
+            const avatarUrl = userData?.wechatAvatar || serverAvatarUrl;
+            if (avatarUrl) {
+                console.log('本地头像不存在，尝试加载远程头像:', avatarUrl);
+                this.loadRemoteAvatar(avatarUrl);
+                return;
+            }
+            
+            // 3. 都没有则使用默认头像
+            console.log('没有可用的头像，使用默认头像');
+            this.loadDefaultAvatar();
+            
+        } catch (error) {
+            console.error('加载用户头像失败:', error);
+            this.loadDefaultAvatar();
+        }
+    }
+
+    /**
+     * 加载默认头像
+     */
+    private loadDefaultAvatar() {
+        // 这里可以设置一个默认的头像资源
+        console.log('设置默认头像');
+        // 可以从resources加载默认头像或者设置为null
+        // this.avatarSprite.spriteFrame = null;
+    }
+
+    /**
+     * 安全地加载远程头像（备用方法）
      */
     private loadRemoteAvatar(avatarUrl: string) {
         try {
             assetManager.loadRemote<ImageAsset>(avatarUrl, (err, imageAsset) => {
                 if (err) {
                     console.warn('Failed to load remote avatar:', err);
+                    this.loadDefaultAvatar();
                     return;
                 }
                 
                 if (!imageAsset || !this.avatarSprite) {
                     console.warn('ImageAsset or avatarSprite is null');
+                    this.loadDefaultAvatar();
                     return;
                 }
                 
@@ -219,10 +263,12 @@ export class MinePageUIController extends Component {
                     console.log('Successfully loaded remote avatar');
                 } catch (textureError) {
                     console.error('Error creating texture from image:', textureError);
+                    this.loadDefaultAvatar();
                 }
             });
         } catch (error) {
             console.error('Error loading remote avatar:', error);
+            this.loadDefaultAvatar();
         }
     }
 

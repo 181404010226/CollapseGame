@@ -43,6 +43,12 @@ export class DeviceInfoCollector extends Component implements INativeMessageHand
     private deviceInfoPromise: Promise<DeviceInfo> = null;
     private resolveDeviceInfoPromise: (value: DeviceInfo) => void = null;
     private rejectDeviceInfoPromise: (reason?: any) => void = null;
+    
+    // Android ID请求管理
+    private androidIdPromise: Promise<string> = null;
+    private resolveAndroidIdPromise: (value: string) => void = null;
+    private rejectAndroidIdPromise: (reason?: any) => void = null;
+    private androidIdTimeout: any = null;
 
     start() {
         warn('=== DeviceInfoCollector start 开始 ===');
@@ -120,7 +126,10 @@ export class DeviceInfoCollector extends Component implements INativeMessageHand
                 this.handleDeviceInfoError(data);
                 break;
             case 'androidIdResult':
-                log('Android ID:', data);
+                this.handleAndroidIdResult(data);
+                break;
+            case 'androidIdError':
+                this.handleAndroidIdError(data);
                 break;
             case 'simInfoResult':
                 log('SIM信息:', data);
@@ -239,6 +248,44 @@ export class DeviceInfoCollector extends Component implements INativeMessageHand
     }
 
     /**
+     * 处理Android ID结果
+     */
+    private handleAndroidIdResult(androidId: string): void {
+        log('Android ID:', androidId);
+        
+        if (this.androidIdTimeout) {
+            clearTimeout(this.androidIdTimeout);
+            this.androidIdTimeout = null;
+        }
+        
+        if (this.resolveAndroidIdPromise) {
+            this.resolveAndroidIdPromise(androidId || '');
+            this.resolveAndroidIdPromise = null;
+            this.rejectAndroidIdPromise = null;
+            this.androidIdPromise = null;
+        }
+    }
+    
+    /**
+     * 处理Android ID错误
+     */
+    private handleAndroidIdError(errorMsg: string): void {
+        warn('获取Android ID失败:', errorMsg);
+        
+        if (this.androidIdTimeout) {
+            clearTimeout(this.androidIdTimeout);
+            this.androidIdTimeout = null;
+        }
+        
+        if (this.rejectAndroidIdPromise) {
+            this.rejectAndroidIdPromise(new Error(errorMsg));
+            this.rejectAndroidIdPromise = null;
+            this.resolveAndroidIdPromise = null;
+            this.androidIdPromise = null;
+        }
+    }
+
+    /**
      * 收集完整的设备信息
      */
     public async collectDeviceInfo(): Promise<DeviceInfo> {
@@ -312,23 +359,26 @@ export class DeviceInfoCollector extends Component implements INativeMessageHand
      */
     public async getAndroidId(): Promise<string> {
         if (sys.platform === sys.Platform.ANDROID && sys.isNative) {
-            return new Promise((resolve) => {
-                const originalHandler = native.bridge.onNative;
-                const timeout = setTimeout(() => {
+            // 如果已有请求在进行中，返回现有的Promise
+            if (this.androidIdPromise) {
+                return this.androidIdPromise;
+            }
+            
+            this.androidIdPromise = new Promise((resolve, reject) => {
+                this.resolveAndroidIdPromise = resolve;
+                this.rejectAndroidIdPromise = reject;
+                
+                // 设置超时
+                this.androidIdTimeout = setTimeout(() => {
                     warn('获取Android ID超时');
-                    resolve('');
-                    native.bridge.onNative = originalHandler;
-                }, 3000);
-
-                native.bridge.onNative = (command: string, data: string) => {
-                    if (command === 'androidIdResult') {
-                        clearTimeout(timeout);
-                        resolve(data || '');
-                        native.bridge.onNative = originalHandler;
-                    } else if (originalHandler) {
-                        originalHandler(command, data);
+                    if (this.resolveAndroidIdPromise) {
+                        this.resolveAndroidIdPromise('');
+                        this.resolveAndroidIdPromise = null;
+                        this.rejectAndroidIdPromise = null;
+                        this.androidIdPromise = null;
+                        this.androidIdTimeout = null;
                     }
-                };
+                }, 3000);
                 
                 try {
                     const success = NativeBridge.sendToNative('getAndroidId', '');
@@ -336,12 +386,19 @@ export class DeviceInfoCollector extends Component implements INativeMessageHand
                         native.bridge.sendToNative('getAndroidId', '');
                     }
                 } catch (error) {
-                    clearTimeout(timeout);
+                    if (this.androidIdTimeout) {
+                        clearTimeout(this.androidIdTimeout);
+                        this.androidIdTimeout = null;
+                    }
                     warn('发送获取Android ID请求失败:', error);
-                    resolve('');
-                    native.bridge.onNative = originalHandler;
+                    reject(error);
+                    this.resolveAndroidIdPromise = null;
+                    this.rejectAndroidIdPromise = null;
+                    this.androidIdPromise = null;
                 }
             });
+            
+            return this.androidIdPromise;
         }
         warn('非Android原生环境，无法获取Android ID');
         return '';

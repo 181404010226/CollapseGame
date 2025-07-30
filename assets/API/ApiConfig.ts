@@ -1,3 +1,5 @@
+import { sys } from 'cc';
+
 /**
  * API配置文件
  * 集中管理所有API相关的配置信息
@@ -29,6 +31,7 @@ export interface UserData {
     access_token: string;
     expire_in: number;
     client_id: string | null;
+    localAvatarSpriteFrame?: any; // 本地保存的头像SpriteFrame（使用any避免循环依赖）
 }
 
 /**
@@ -257,6 +260,42 @@ export interface AddLotteryResponse {
     drawNum: number;    // 更新后的抽奖次数
     success: boolean;   // 是否成功
     resetTime?: number; // 重置时间戳（可选）
+}
+
+/**
+ * 设备风控上报请求参数
+ * 输入内容：设备信息和风控检测数据
+ */
+export interface RiskDetectionRequest extends BaseReq {
+    simCard?: string;           // SIM卡信息
+    noSimCard?: boolean;        // 是否无sim卡
+    isDebug?: boolean;          // 是否开启调试
+    isCharging?: boolean;       // 是否充电中
+    isVpn?: boolean;           // 是否开启VPN
+    isRoot?: boolean;          // 是否刷机/越狱
+    isCleanData?: boolean;     // 是否清理数据
+    isResetIdfa?: boolean;     // 是否重置广告标识
+    idfa?: string;             // 广告标识符
+    appVersion?: string;       // APP版本
+    platform?: string;         // 设备平台类型举例：android ios wap web
+    model?: string;            // 设备型号
+    brand?: string;            // 设备品牌
+    channel?: string;          // 应用渠道
+    isNetwork?: boolean;       // 是否有网络
+    isWifi?: boolean;          // 是否wifi联网
+    hasGyroscope?: boolean;    // 是否开启陀螺仪/重力传感器
+    osVersion?: string;        // 操作系统版本
+    devToken?: string;         // 连山云dev_token，初次上报时候需要传
+    juliangAndroidId?: string; // 聚量AndroidId
+    oaid?: string;             // OAID
+}
+
+/**
+ * 设备风控上报响应数据
+ * 返回内容：风控检测结果
+ */
+export interface RiskDetectionResponse extends AjaxResult {
+    // 继承AjaxResult的所有字段：error, success, warn, empty
 }
 
 export interface OpTgcfIllustration {
@@ -821,40 +860,69 @@ export class ApiConfig {
      * @returns true表示真机环境，false表示模拟器或非原生环境
      */
     public static isRealDevice(): boolean {
-        // 导入sys模块来检查平台和原生状态
-        const { sys } = require('cc');
-        
-        // 只有在Android原生环境下才认为是真机
-        return sys.platform === sys.Platform.ANDROID && sys.isNative;
+        try {
+            // 使用导入的sys模块来检查平台和原生状态
+            return sys.platform === sys.Platform.ANDROID && sys.isNative;
+        } catch (error) {
+            console.warn('ApiConfig.isRealDevice: 无法获取sys模块，假设为非真机环境:', error);
+            // 如果无法获取sys模块，假设为非真机环境（模拟器或Web环境）
+            return false;
+        }
     }
 
     /**
      * 获取默认设备信息
      * 根据是否为真机环境决定使用模拟设备ID还是真实设备ID
      */
-    public static async getDefaultDeviceInfo(): Promise<{ androidId: string; deviceId: string }> {
+    public static async getDefaultDeviceInfo(): Promise<any> {
         // 检查是否为真机环境
         if (this.isRealDevice()) {
             try {
                 // 真机环境：尝试获取真实设备信息
                 const { DeviceInfoCollector } = await import('./DeviceInfoCollector');
-                const { director } = require('cc');
+                const { director, Node, game } = await import('cc');
                 
                 // 尝试从场景中找到DeviceInfoCollector实例
                 const scene = director.getScene();
                 let deviceCollector = scene?.getComponentInChildren(DeviceInfoCollector);
                 
+                // 如果场景中没有找到，创建一个临时实例
+                if (!deviceCollector) {
+                    console.log('ApiConfig: 场景中未找到DeviceInfoCollector，创建临时实例');
+                    const tempNode = new Node('TempDeviceInfoCollector');
+                    deviceCollector = tempNode.addComponent(DeviceInfoCollector);
+                    // 设置为常驻节点，避免被销毁
+                    game.addPersistRootNode(tempNode);
+                    
+                    // 等待一小段时间让组件初始化
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+                
                 if (deviceCollector) {
-                    // 获取真实的Android ID和设备ID
-                    const androidId = await deviceCollector.getAndroidId();
+                    // 获取完整的设备信息
                     const deviceInfo = await deviceCollector.collectDeviceInfo();
                     
+                    console.log('ApiConfig: 成功获取真实设备信息', deviceInfo);
+                    
+                    // 返回完整的设备信息，确保包含brand和model
                     return {
-                        androidId: androidId || this.generateMockAndroidId(),
-                        deviceId: deviceInfo?.deviceId || '13974751124'
+                        androidId: deviceInfo?.androidId || this.generateMockAndroidId(),
+                        deviceId: deviceInfo?.deviceId || '13974751124',
+                        brand: deviceInfo?.brand || 'Unknown',
+                        model: deviceInfo?.model || 'Unknown',
+                        osVersion: deviceInfo?.osVersion || '',
+                        platform: deviceInfo?.platform || 'Android',
+                        simCard: deviceInfo?.simCard || '',
+                        hasGyroscope: deviceInfo?.hasGyroscope || false,
+                        isCharging: deviceInfo?.charging || false,
+                        isRoot: deviceInfo?.root || false,
+                        isVpn: deviceInfo?.vpn || false,
+                        isNetwork: deviceInfo?.network || false,
+                        isWifi: deviceInfo?.wifi || false,
+                        isDebug: deviceInfo?.debug || false
                     };
                 } else {
-                    console.warn('ApiConfig: 未找到DeviceInfoCollector实例，使用默认设备信息');
+                    console.warn('ApiConfig: 无法创建DeviceInfoCollector实例，使用默认设备信息');
                 }
             } catch (error) {
                 console.warn('ApiConfig: 获取真实设备信息失败，使用默认设备信息:', error);
@@ -864,7 +932,19 @@ export class ApiConfig {
         // 非真机环境或获取失败：使用模拟设备信息
         return {
             androidId: this.generateMockAndroidId(),
-            deviceId: '13974751124' // 使用固定的设备ID，与其他地方保持一致
+            deviceId: '13974751124', // 使用固定的设备ID，与其他地方保持一致
+            brand: 'Unknown',
+            model: 'Unknown',
+            osVersion: '',
+            platform: 'Android',
+            simCard: '',
+            hasGyroscope: false,
+            isCharging: false,
+            isRoot: false,
+            isVpn: false,
+            isNetwork: false,
+            isWifi: false,
+            isDebug: false
         };
     }
 
@@ -872,20 +952,44 @@ export class ApiConfig {
      * 获取默认设备信息（同步版本，用于向后兼容）
      * 只有非真机的情况下才使用模拟设备ID，其余情况要获取真实设备ID
      */
-    public static getDefaultDeviceInfoSync(): { androidId: string; deviceId: string } {
+    public static getDefaultDeviceInfoSync(): any {
         // 如果是真机环境，返回空值，提示应该使用异步方法
         if (this.isRealDevice()) {
             console.warn('ApiConfig: 真机环境下应使用 getDefaultDeviceInfo() 异步方法获取真实设备信息');
             return {
                 androidId: '',
-                deviceId: ''
+                deviceId: '',
+                brand: '',
+                model: '',
+                osVersion: '',
+                platform: 'Android',
+                simCard: '',
+                hasGyroscope: false,
+                isCharging: false,
+                isRoot: false,
+                isVpn: false,
+                isNetwork: false,
+                isWifi: false,
+                isDebug: false
             };
         }
         
         // 非真机环境：使用模拟设备信息
         return {
             androidId: this.generateMockAndroidId(),
-            deviceId: '13974751124'
+            deviceId: '13974751124',
+            brand: 'Unknown',
+            model: 'Unknown',
+            osVersion: '',
+            platform: 'Android',
+            simCard: '',
+            hasGyroscope: false,
+            isCharging: false,
+            isRoot: false,
+            isVpn: false,
+            isNetwork: false,
+            isWifi: false,
+            isDebug: false
         };
     }
 
