@@ -78,7 +78,7 @@ export class AudioManager extends Component {
         // 优先使用手动跟踪的场景名
         if (this.currentSceneName) {
             const allowed = this.allowedScenes.includes(this.currentSceneName);
-            console.log(`当前场景: ${this.currentSceneName}, 允许的场景: ${this.allowedScenes.join(', ')}, 是否允许: ${allowed}`);
+            //console.log(`当前场景: ${this.currentSceneName}, 允许的场景: ${this.allowedScenes.join(', ')}, 是否允许: ${allowed}`);
             return allowed;
         }
 
