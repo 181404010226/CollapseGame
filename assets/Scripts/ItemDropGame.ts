@@ -103,6 +103,7 @@ export class ItemDropGame extends Component {
     private followingStartPos: Vec3 = Vec3.ZERO;       // 跟随开始时的位置
     private progressManager: GameProgressManager = null;
     private effectController: RewardEffectController = null;
+    private isGameOverState: boolean = false;
 
     // -------- 测试模式临时变量 --------
     private isTestLongPress: boolean = false;          // 是否已进入长按模式
@@ -229,6 +230,10 @@ export class ItemDropGame extends Component {
      * 屏幕触摸开始事件
      */
     private onScreenTouchStart(event: EventTouch): void {
+
+        // 游戏结束时不响应触摸
+        if (this.isGameOverState) return;
+
         // ---------- 测试模式处理 ----------
         if (this.testMode) {
             this.handleTestTouchStart(event);
@@ -307,8 +312,13 @@ export class ItemDropGame extends Component {
             return false;
         }
 
-        // 获取dividerLine的世界坐标位置
+        // 获取dividerLine的本地位置（相对于其父节点）
+        const dividerLocalPos = this.dividerLine.getPosition();
+        console.log('ItemDropGame: dividerLine本地位置', dividerLocalPos);
+        
+        // 获取dividerLine的世界位置
         const dividerWorldPos = this.dividerLine.getWorldPosition();
+        console.log('ItemDropGame: dividerLine世界位置', dividerWorldPos);
 
         // 获取dividerLine的UITransform组件以获取宽度
         const dividerTransform = this.dividerLine.getComponent(UITransform);
@@ -317,7 +327,7 @@ export class ItemDropGame extends Component {
             return false;
         }
 
-        // 计算dividerLine的左右边界
+        // 计算dividerLine的左右边界（使用世界坐标）
         const halfWidth = dividerTransform.width / 2;
         const leftBound = dividerWorldPos.x - halfWidth;
         const rightBound = dividerWorldPos.x + halfWidth;
@@ -325,8 +335,17 @@ export class ItemDropGame extends Component {
         // 检查x坐标是否在dividerLine的宽度范围内
         const isWithinXRange = worldPos.x >= leftBound && worldPos.x <= rightBound;
 
-        // 检查y坐标是否在dividerLine下方100像素
-        const isBelowDivider = worldPos.y <= dividerWorldPos.y + 100;
+        // 检查y坐标是否在dividerLine下方（注意Cocos的Y轴方向）
+        const isBelowDivider = worldPos.y <= dividerWorldPos.y;
+
+        console.log('ItemDropGame: 触摸检测', {
+            worldPos: worldPos,
+            dividerWorldPos: dividerWorldPos,
+            leftBound: leftBound,
+            rightBound: rightBound,
+            isWithinXRange: isWithinXRange,
+            isBelowDivider: isBelowDivider
+        });
 
         return isWithinXRange && isBelowDivider;
     }
@@ -1028,6 +1047,31 @@ export class ItemDropGame extends Component {
             this.itemProbabilities = [...newProbabilities];
             this.initializeProbabilities();
         }
+    }
+    /**
+     * 设置游戏结束状态
+     */
+    public setGameOver(gameOver: boolean): void {
+        this.isGameOverState = gameOver;
+    }
+
+    /**
+     * 重新开始游戏
+     */
+    public restartGame(): void {
+        this.isGameOverState = false;
+        this.isDropping = false;
+        this.isFollowing = false;
+        this.isPlayingMaxLevelEffect = false;
+
+        // 清理当前预览物品
+        if (this.currentPreviewItem?.isValid) {
+            this.currentPreviewItem.destroy();
+            this.currentPreviewItem = null;
+        }
+
+        // 生成新的预览物品
+        this.generateNextPreviewItem();
     }
 
     /**

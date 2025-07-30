@@ -1,5 +1,4 @@
-import { _decorator, Component, log, warn } from 'cc';
-
+import { _decorator, Component, log, warn, director, Node, game } from 'cc';
 const { ccclass, property } = _decorator;
 
 /**
@@ -14,8 +13,9 @@ export interface OnlineTimeData {
 }
 
 /**
- * 在线时长管理器
+ * 全局在线时长管理器
  * 负责追踪用户在线时长，支持每日重置和任务完成状态管理
+ * 游戏启动时自动开始计时，退出游戏时停止
  */
 @ccclass('OnlineTimeManager')
 export class OnlineTimeManager extends Component {
@@ -27,6 +27,7 @@ export class OnlineTimeManager extends Component {
     private totalOnlineTime: number = 0;
     private lastSaveTime: number = 0;
     private completedTasks: Set<number> = new Set();
+    private isTimingActive: boolean = false;
 
     // 定时器
     private saveTimer: number = null;
@@ -42,6 +43,28 @@ export class OnlineTimeManager extends Component {
         return OnlineTimeManager.instance;
     }
 
+    /**
+     * 初始化全局在线时长管理器
+     * 应该在游戏启动时调用
+     */
+    public static initializeGlobal(): OnlineTimeManager {
+        if (OnlineTimeManager.instance) {
+            return OnlineTimeManager.instance;
+        }
+
+        // 查找或创建持久化节点
+        let persistentNode = director.getScene().getChildByName('GlobalManagers');
+        if (!persistentNode) {
+            persistentNode = new Node('GlobalManagers');
+            director.getScene().addChild(persistentNode);
+            game.addPersistRootNode(persistentNode); // 设置为常驻节点
+        }
+
+        const timeManager = persistentNode.addComponent(OnlineTimeManager);
+        log('OnlineTimeManager: 全局在线时长管理器已初始化');
+        return timeManager;
+    }
+
     onLoad() {
         if (OnlineTimeManager.instance) {
             this.destroy();
@@ -50,24 +73,39 @@ export class OnlineTimeManager extends Component {
 
         OnlineTimeManager.instance = this;
         this.loadOnlineTimeData();
+        this.autoStartTiming();
         log('OnlineTimeManager: 在线时长管理器已初始化');
     }
 
     onDestroy() {
-        this.stopTimer();
-        this.saveOnlineTimeData();
+        this.stopTiming();
         if (OnlineTimeManager.instance === this) {
             OnlineTimeManager.instance = null;
         }
     }
 
     /**
-     * 开始计时（当PangleAdRoot节点加载时调用）
+     * 自动开始计时
+     */
+    private autoStartTiming(): void {
+        if (!this.isTimingActive) {
+            this.startTiming();
+        }
+    }
+
+    /**
+     * 开始计时
      */
     public startTiming(): void {
+        if (this.isTimingActive) {
+            log('OnlineTimeManager: 计时已在进行中');
+            return;
+        }
+
         const now = Date.now();
         this.sessionStartTime = now;
         this.lastSaveTime = now;
+        this.isTimingActive = true;
 
         // 检查是否需要每日重置
         this.checkDailyReset();
@@ -82,11 +120,23 @@ export class OnlineTimeManager extends Component {
      * 停止计时
      */
     public stopTiming(): void {
+        if (!this.isTimingActive) {
+            return;
+        }
+
         this.stopTimer();
         this.updateTotalTime();
         this.saveOnlineTimeData();
+        this.isTimingActive = false;
 
         log('OnlineTimeManager: 停止计时，总在线时长:', this.formatTime(this.totalOnlineTime));
+    }
+
+    /**
+     * 获取计时状态
+     */
+    public isActive(): boolean {
+        return this.isTimingActive;
     }
 
     /**
@@ -241,26 +291,16 @@ export class OnlineTimeManager extends Component {
      * 从本地存储加载在线时长数据
      */
     private loadOnlineTimeData(): void {
-        try {
-            const data = this.loadStoredData();
-            if (data) {
-                this.totalOnlineTime = data.totalOnlineTime || 0;
-                this.completedTasks = new Set(data.completedTasks || []);
-
-                // 检查是否需要每日重置
-                const today = new Date().toDateString();
-                if (data.lastResetDate !== today) {
-                    log('OnlineTimeManager: 检测到新的一天，重置数据');
-                    this.totalOnlineTime = 0;
-                    this.completedTasks.clear();
-                } else {
-                    log(`OnlineTimeManager: 加载已保存数据，总在线时长: ${this.formatTime(this.totalOnlineTime)}`);
-                }
-            } else {
-                log('OnlineTimeManager: 未找到已保存的数据，使用默认值');
-            }
-        } catch (error) {
-            warn('OnlineTimeManager: 加载数据失败:', error);
+        const data = this.loadStoredData();
+        if (data) {
+            this.sessionStartTime = data.sessionStartTime || 0;
+            this.totalOnlineTime = data.totalOnlineTime || 0;
+            this.lastSaveTime = data.lastSaveTime || Date.now();
+            this.completedTasks = new Set(data.completedTasks || []);
+            
+            log('OnlineTimeManager: 已加载本地数据，总在线时长:', this.formatTime(this.totalOnlineTime));
+        } else {
+            log('OnlineTimeManager: 未找到本地数据，使用默认值');
         }
     }
 
@@ -270,30 +310,23 @@ export class OnlineTimeManager extends Component {
     private loadStoredData(): OnlineTimeData | null {
         try {
             const dataStr = localStorage.getItem(this.STORAGE_KEY);
-            return dataStr ? JSON.parse(dataStr) : null;
+            if (dataStr) {
+                return JSON.parse(dataStr);
+            }
         } catch (error) {
-            warn('OnlineTimeManager: 解析存储数据失败:', error);
-            return null;
+            warn('OnlineTimeManager: 加载本地数据失败:', error);
         }
+        return null;
     }
 
     /**
      * 格式化时间显示
-     * @param seconds 秒数
-     * @returns 格式化的时间字符串
      */
     private formatTime(seconds: number): string {
         const hours = Math.floor(seconds / 3600);
         const minutes = Math.floor((seconds % 3600) / 60);
         const secs = seconds % 60;
-
-        if (hours > 0) {
-            return `${hours}小时${minutes}分钟${secs}秒`;
-        } else if (minutes > 0) {
-            return `${minutes}分钟${secs}秒`;
-        } else {
-            return `${secs}秒`;
-        }
+        return `${hours}时${minutes}分${secs}秒`;
     }
 
     /**
@@ -308,3 +341,4 @@ export class OnlineTimeManager extends Component {
             `会话开始: ${this.sessionStartTime > 0 ? new Date(this.sessionStartTime).toLocaleString() : '未开始'}`;
     }
 }
+
