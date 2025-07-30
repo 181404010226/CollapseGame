@@ -741,12 +741,17 @@ export class TaskCenterPageController extends Component {
      */
     private ensureOnlineTimeManager(): OnlineTimeManager {
         let timeManager = OnlineTimeManager.getInstance();
-
+        
         if (!timeManager) {
-            console.log('OnlineTimeManager未初始化，立即创建...');
-            timeManager = this.createOnlineTimeManager();
+            console.warn('TaskCenterPageController: OnlineTimeManager未初始化，尝试初始化全局实例');
+            timeManager = OnlineTimeManager.initializeGlobal();
         }
-
+        
+        // 确保计时已开始
+        if (timeManager && !timeManager.isActive()) {
+            timeManager.startTiming();
+        }
+        
         return timeManager;
     }
 
@@ -754,36 +759,8 @@ export class TaskCenterPageController extends Component {
      * 创建OnlineTimeManager实例
      */
     private createOnlineTimeManager(): OnlineTimeManager {
-        // 优先级顺序：PangleAdRoot > Canvas > 当前节点
-        const targetNodes = [
-            this.node.scene.getChildByName('PangleAdRoot'),
-            this.node.scene.getChildByName('Canvas'),
-            this.node
-        ];
-
-        for (const targetNode of targetNodes) {
-            if (targetNode) {
-                // 检查是否已有组件
-                let timeManager = targetNode.getComponent(OnlineTimeManager);
-                if (timeManager) {
-                    console.log(`在${targetNode.name}找到OnlineTimeManager`);
-                    return timeManager;
-                }
-
-                // 创建新组件
-                timeManager = targetNode.addComponent(OnlineTimeManager);
-                console.log(`在${targetNode.name}创建OnlineTimeManager`);
-
-                // 立即启动计时
-                if (timeManager.startTiming) {
-                    timeManager.startTiming();
-                }
-
-                return timeManager;
-            }
-        }
-
-        throw new Error('无法创建OnlineTimeManager：找不到合适的节点');
+        // 直接使用全局实例
+        return this.ensureOnlineTimeManager();
     }
 
     /**
