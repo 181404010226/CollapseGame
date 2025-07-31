@@ -1,5 +1,6 @@
 import { _decorator, Component, director, log, game, Game } from 'cc';
 import { OnlineTimeManager } from './任务中心/OnlineTimeManager';
+import OceanEngineSDK from '../API/OceanEngineSDK';
 
 const { ccclass, property } = _decorator;
 
@@ -23,10 +24,28 @@ export class GameLauncher extends Component {
         // 初始化全局在线时长管理器
         OnlineTimeManager.initializeGlobal();
 
+        // 初始化巨量引擎转化SDK
+        this.initializeOceanEngineSDK();
+
         // 监听游戏暂停/恢复事件
         this.setupGameLifecycleEvents();
 
         log('GameLauncher: 全局系统初始化完成');
+    }
+
+    /**
+     * 初始化巨量引擎转化SDK
+     */
+    private initializeOceanEngineSDK(): void {
+        log('GameLauncher: 开始初始化巨量引擎转化SDK');
+        
+        try {
+            // 初始化巨量SDK
+            OceanEngineSDK.init();
+            log('GameLauncher: 巨量引擎转化SDK初始化完成');
+        } catch (error) {
+            log('GameLauncher: 巨量引擎转化SDK初始化失败:', error);
+        }
     }
 
     /**

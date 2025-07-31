@@ -1,0 +1,1132 @@
+SDK名称
+巨量引擎转化SDK
+开发者
+北京巨量引擎网络技术有限公司
+主要功能
+用于广告归因所需信息收集，完成精准归因
+版本号
+
+- IOS ：1.0.5
+- Android ：2.0.0
+个人信息处理规则
+巨量引擎转化跟踪sdk隐私政策_2025.4（公开）（商业转化组件2.0.0以上版本参考）
+合规使用说明
+巨量引擎转化SDK开发者使用合规规范-2025.2 （公开）（商业转化组件2.0.0以上版本参考）
+更新日期
+更新内容
+3.12
+- iOS SDK发布1.0.5，函数名优化、参数名优化
+25.3.07
+
+- 【重大更新】安卓商业化组件版本更新至2.0.0（历史版本接入流程仍可用，接入流程移至附录）
+  - 去除applog依赖，现在仅需接入转化组件即可完成客户端改造
+    - 包体积从1.3M减小至148K
+    - 快速接入，仅需一行代码完成接入
+    - 性能优化，启动事件上报时延减小
+  - 宿主可以配置CustomOaidCallback，避免重复获取OAID
+  - 宿主可以配置CustomAndroidIDCallback，避免重复获取android_id
+  - 优化了混淆配置，现在宿主不需要主动配置混淆策略
+2.26
+- iOS SDK发布1.0.3，去除protobuf依赖
+12.25
+- 安卓商业化组件版本更新至1.3.2.1
+  - 优化了混淆配置，将混淆配置内置，并自动透传至接入宿主
+11.14
+- 安卓商业化组件版本更新至1.3.2.0
+11.4
+- 转化上报接口新增IDFV/Androidid上报校验，需回传IDFV/Androidid才能完成改造，详见4.4.5转化上报
+10.17
+
+- 安卓商业化组件版本更新至1.3.1.9
+  - 解决了与其他字节SDK在获取android_id的冲突问题
+
+9.23
+- 安卓商业化组件版本更新至1.3.1.6
+  - 删除了部分废弃逻辑，提高启动事件的发送速度
+9.18
+- 安卓商业化组件版本更新至1.3.1.5
+  - 优化了启动事件的上报逻辑
+9.2
+- 转化上报接口新增idfv、android_id上报（见4.4.5）
+8.26
+- 安卓SDK版本升级至6.16.9
+  - 解决荣耀 OAID 冲突问题
+8.20
+- 安卓商业化组件版本更新至1.3.1.2.2-bugfix
+  - 修复了在联想平板上可能会出现崩溃的问题
+8.20
+- 安卓商业化组件版本更新至1.3.1.2
+8.14
+- 安卓商业化组件版本更新至1.3.1.0
+- 隐私协议更新
+- 若工程开启了混淆，请参照【4.2.2.4常见问题汇总】添加混淆配置
+
+8.6
+- 安卓商业化组件版本更新至1.3.0.8
+8.2
+- 安卓商业化组件版本更新至1.3.0.6(有偶现Bug，请勿使用)
+6.24
+- 安卓商业化组件版本更新至1.3.0.5
+
+6.20
+- 安卓商业化组件版本更新至1.3.0.0
+- 隐私协议更新
+方案讲解视频：
+暂时无法在飞书文档外展示此内容
+一、产品逻辑介绍
+将巨量的归因能力通过SDK赋能给广告主，由转化SDK进行APP打开事件上报和设备ID采集、CLICKID的解析，并进行激活预归因，同时新增HTTP实时归因接口，将巨量引擎激活预归因结果回传给广告主，由广告主认领并筛选激活，最终通过API回传激活和深度事件，代码开源逻辑透明，降低客户接入顾虑。
+- 数据资产保密性：SDK仅采集激活事件，不强制采集其他深度事件，保障客户核心数据资产的保密性；
+- 归因主动权保留：平台支持客户自定义激活窗口，且所有转化事件均由广告主最终确定并通过API回传，保障客户自主归因的权利；
+- 归因逻辑透明化：平台激活归因逻辑透明化，激活对应的触点和广告信息全程可追溯；
+- 代码逻辑开源化：IOS-SDK代码完全开源，广告主可验证SDK的所有逻辑；
+[图片]
+二、方案收益
+将巨量的归因能力通过SDK赋能给广告主，基于SDK采集的全渠道激活数据进行已转化用户过滤和模型助攻，降低转化成本，提高跑量能力。在正确接入的前提下，预计可在成本不变的同时提量10%-20%（IOS+20%，安卓+10%）
+三大助力场景
+广告主投放面临问题
+
+【融合归因】解决方案
+归因
+❌归因准确率较低
+→→
+✅归因准确率提升
+
+部分广告主不能完整识别巨量引擎渠道转化（精准设备归因率iOS 在 40%左右, 安卓在80%左右），绝大部分转化都是使用模糊归因，影响模型预估和跑量roi效果，归因准确率仍有优化的空间；
+
+引入ID采集优化方案&归因率可达100%的精准归因id（CLICKID），帮助广告主提升归因准确率至100%；
+
+
+❌人群茧房问题
+→→
+✅精准ID实现人群破圈
+
+媒体模型侧会过滤广告主无法采集ID的潜在转化用户（只对广告主能采集ID的用户下发广告），不利于人群破圈，影响投放效果。
+
+
+由于CLICKID的准确归因补足对用户的识别，可以为客户扩展有意识关闭设备授权的潜在高价值用户，实现投放的人群破圈效应；
+[图片]
+去重
+❌媒体间转化无法去重
+→→
+✅媒体间转化去重
+
+全渠道的转化无法实时去重, 导致不同媒体间存在重复触达，流量浪费；
+
+实时去重全渠道激活事件，避免激活用户重复触达；且将非巨量渠道的激活事件应用于助攻模型，提升广告主投放和跑量效果20%+；
+助攻
+❌模型无法感知全渠道的转化
+模型无法感知其他渠道跑量用户，转化样本少，影响模型预估
+
+✅全渠道转化助攻
+基于SDK采集的全渠道激活数据，将非巨量渠道的激活事件应用于助攻模型（不扣费），提升广告主投放和跑量效果20%+；
+收益验证方式：广告主可在巨量广告后台-资产-事件管理中监控接入进度，包维度完成改造后（当前接入状态为“完成改造”），系统会随机选择部分流量不生效融合归因策略，用于对比验证融合归因的收益，广告主在完成对接后，可在巨量广告后台事件管理页面查看当前完成接入包的收益
+跑量能力提升：指生效融合归因策略对比不生效策略消耗提升的百分比
+[图片]
+
+三、showcase
+游戏App
+[图片]
+[图片]
+[图片]
+社交App
+[图片]
+四、接入流程（一个全人力8天）
+4.1接入check list
+接入流程共计预期12天，其中需客户1个全人力8天
+暂时无法在飞书文档外展示此内容
+问题自助排查：接入中的状态与问题，均可在广告后台-事件管理-融合归因方案中查看，并可在对应建议中导出问题明细（涉及IDFV/AndroidID）进行辅助排查，确认问题原因
+[图片]
+以下为接入流程的关键步骤，建议完成客户端和服务端的开发前后都重点check下各步骤是否完成：
+步骤
+checklist
+备注
+step1 客户端SDK接入
+
+[] 客户端是否集成SDK代码？
+  [] （仅IOS）是否有按照要求注册URL Scheme
+
+- SDK代码详见：
+  - IOS SDK接入代码
+  - 安卓SDK接入代码
+
+[] 接入SDK版本是否为最新版本？
+
+- SDK最新版本号：
+  - 安卓新版（商业组件2.0.0版本以上）
+    - 2.0.0
+  - 安卓历史版本（商业组件2.0.0版本以下）：
+    - SDK版本：6.16.9
+    - 商业化转化组件：1.3.2.1
+  - IOS：1.0.5
+
+[] Androidid / IDFV 是否100%获取？
+
+- Androidid采集方法建议：链接
+- IDFV需要采集最新的IDFV，不能使用keychain缓存IDFV
+  - 用户卸载重装后IDFV会发生变更，此时需要采集变更后的IDFV传给实时激活归因接口；采用keychain缓存过去的IDFV上报是无法生效的
+
+[] 是否有通过SDK数据检测？（仅安卓，IOS无需数据检测）
+
+参考链接
+
+
+[] 接入SDK后应用是否发版？
+/
+step2 服务端实时归因接口调用
+
+[] 是否前置观看归因改造指导视频？（仅需花费3分钟）
+
+- 视频链接：
+https://bytedance.larkoffice.com/minutes/obcnzku9pn91bkx9j9m678su
+
+[] 是否对于全量激活均调用实时归因服务接口
+（需使用IDFV/Androidid原值）
+
+- 需要对全量激活均实时调用接口获取数据，避免出现以下情况：
+  1. 在原归因逻辑归到巨量时才请求巨量实时归因服务接口❌
+  2. 在原归因逻辑未归因成功时才请求巨量实时归因服务❌
+- “新增用户”与“回流激活”均需要请求归因接口
+  - “新增用户”指的是用户初次下载激活APP
+  - “回流用户”指的是用户新增之后，经过客户认为的窗口期没有产生过活跃，再次活跃时算作激活可以给广告进行归因。这两个时机需要客户请求实时归因接口。
+
+[] 是否成功调用巨量实时归因接口？
+
+- 参考4.4.3巨量实时归因接口
+- 实时归因接口返回错误码为0代表请求成功
+[图片]
+
+[] 接口请求失败后是否有重试逻辑？
+
+- 由于网络等不可控原因，SDK事件上报可能出现时延情况，建议广告主在接口调用失败后有兜底重试逻辑，保障100%的激活均可以获得归因结果。建议最多重试三次，每次间隔300ms，也可以根据自身情况来确定，期间保持APP运行不要退出。如果重试后还是同样情况，建议更换设备再试试。
+step3 服务端归因逻辑改造
+
+[] 是否将巨量实时归因接口返回的last_touch_time，跟匹配触点找到的最后一次点击时间放在同一优先级比较，转化回传给时间更靠后的一个；
+
+- 建议将巨量实时归因接口返回的归因结果跟匹配触点的结果放在同一优先级比较
+[图片]
+- 避免出现以下情况：
+  1. 在原归因逻辑归到巨量时才使用巨量实时归因服务接口返回callback回传❌
+  2. 在原归因逻辑未归因成功时才使用巨量实时归因服务返回callback回传❌
+  3. 仅在is_dp_open=ture 时才使用巨量实时归因服务返回callback回传❌
+
+[] 确认在触点监测中的设备id停发的前提下，巨量渠道的归因是否无影响？
+
+
+
+[] 通过原触点监测未归因到推广渠道的转化，巨量实时归因接口返回巨量归因成功，是否会回传给巨量？
+
+
+[] 转化上报接口是否新增转化对应设备广告主app采集到（非触点监测中下发）的IDFV（ios）/Androidid（安卓）
+- 无论是通过融合归因接口还是触点完成归因，都需要带采集到的IDFV/Androidid上报，详见4.4.5转化上报
+
+[] 深度事件归注册的包（如付费行为归因至注册行为归因渠道），SDK要上报注册事件和用户ID
+
+/
+
+
+[] 新版归因逻辑是否完成上线？
+/
+
+[] 是否有通过事件管理联调
+- 参考链接
+4.2 转化SDK接入
+广告主接入SDK后，需要在APP隐私政策中加上SDK的隐私协议进行披露，SDK隐私协议参考文档：巨量引擎转化SDK开发者使用合规规范-2025.2 （公开）
+安卓：SDK会采集OAID、ANDROID_ID和其他的设备特征字段，请遵循相关合规要求在隐私弹窗后采集
+IOS：SDK会采集IDFA、IDFV和其他的设备特征字段，请遵循相关合规要求在隐私弹窗后采集
+重点提示：巨量引擎转化SDK面向中国境内广告主和用户提供服务，因此巨量引擎转化SDK不会主动采集境外数据。请开发者在接入巨量引擎转化SDK前核查是否存在同一包体在境外上架的情况，若开发者所运营的产品涉及境外数据采集，开发者应遵守上架所在国家或地区法律关于数据合规相关的法律或政策规定。如涉及禁止数据跨境传输的，开发者应完成数据隔离或上报，如因此给SDK运营方造成相关风险或损失，开发者应承担相应法律责任。
+4.2.1 iOS
+由于SDK可能需要采集IDFA（由宿主通过SDK的开关控制），请广告主app store上架申请时表明需要获取IDFA权限，以免影响审核。
+4.2.1.1 SDK集成
+巨量引擎转化SDK支持pod方式接入，只需配置pod环境，在podfile文件中加入以下代码即可接入成功。开发者可按照以下方式进行接入
+pod  'BDASignalSDK' 
+pod  'Protobuf'  //1.0.3版本及以后不需要
+除此以外，SDK也支持通过静态库方式接入，以下是静态库代码包，供有需要的开发者使用：
+版本：1.0.5
+暂时无法在飞书文档外展示此内容
+iOS隐私合规manifest文件：
+暂时无法在飞书文档外展示此内容
+4.2.1.2SDK使用方式(必要)
+启动事件上报
+启动事件必须通过SDK上报，其他事件可视广告主需求选择是否通过SDK上报
+需要在以下方法，添加转化SDK相关代码，当本app启动时，将相关启动参数传递给巨量引擎转化SDK，用于上报启动事件。并在此时机，注入转化SDK所需要的可选参数。
+如使用AppDelegate：
+#import "BDASignalManager.h"
+#import "BDASignalDefinitions.h"
+
+- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+    // 注册可选参数
+    [BDASignalManager registerWithOptionalData:@{
+        kBDADSignalSDKUserUniqueId : @"3y48693232"  // 业务用户id，非必传
+    }];
+    // 上报冷启动事件
+    [BDASignalManager didFinishLaunchingWithOptions:launchOptions connectOptions:nil];
+
+    return YES;
+}
+如使用SceneDelegate
+#import "BDASignalManager.h"
+#import "BDASignalDefinitions.h"
+
+- (void)scene:(UIScene *)scene willConnectToSession:(UISceneSession *)session options:(UISceneConnectionOptions *)connectionOptions {
+    // 注册可选参数
+    [BDASignalManager registerWithOptionalData:@{
+        kBDADSignalSDKUserUniqueId : @"3y48693232"  // 业务用户id，非必传
+    }];
+    // 上报冷启事件
+    [BDASignalManager didFinishLaunchingWithOptions:nil connectOptions:connectionOptions];
+}
+需要注意的是，以上两种方式，根据接入工程时机情况，选择对应方案即可，且需要注意，两种方案透传给SDK的数据结构不同，AppDelegate方案需要传launchOptions，SceneDelegate方案需要传connectionOptions。
+
+上报成功验证 
+启动事件上报成功后会打印console日志，参见Utilities/BDASignalUtility.m
+[图片]
+获取IDFA
+SDK内部，IDFA的获取，使用了开关来控制。默认不获取IDFA，如果需要获取IDFA的话，可以通过以下方式进行设置
+[BDASignalManager enableIdfa:YES];
+Deeplink clickid采集
+需要在以下方法，添加转化SDK相关代码，当其他app通过deeplink方式打开本app时，将相关参数传递给巨量引擎转化SDK，转化SDK内部将会进行clickid提取以及处理相关归因事件。
+如使用AppDelegate：
+#import "BDASignalManager.h"
+
+- (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {
+    // 将url参数转换成string类型之后，传递给SDK
+    NSString *openUrl = url.absoluteString;
+    [BDASignalManager anylyseDeeplinkClickidWithOpenUrl:openUrl];
+    return YES;
+}
+如使用SceneDelegate
+#import "BDASignalManager.h"
+
+- (void)scene:(UIScene *)scene openURLContexts:(NSSet<UIOpenURLContext *> *)URLContexts
+{
+    // 需要从原始参数重，取相关字段传递给SDK
+    UIOpenURLContext *context = [URLContexts allObjects].firstObject;
+    NSString *openUrl = context.URL.absoluteString;
+    [BDASignalManager anylyseDeeplinkClickidWithOpenUrl:openUrl];
+}
+4.2.1.3URL Scheme注册
+URL Scheme是为方便app之间互相调用而设计的，APP可以注册自己的URL Scheme。为保障后续能通过deeplink直接从巨量APP吊起广告主推广的APP，请按照推荐规范配置URL Scheme；
+配置规则
+在 Xcode 中，选择你的工程设置项，选中“TARGETS”一栏，在“info”标签栏的“URL type“添加“URL scheme”，输入应用对应的包名作为scheme头；
+配置流程可参考官方文档：https://developer.apple.com/documentation/xcode/defining-a-custom-url-scheme-for-your-app#Register-your-URL-scheme
+
+验证是否配置成功
+在测试设备中安装好推广APP，在备忘录中输入以应用包名为scheme头的直达链接，点击该链接，若成功吊起对应的APP，则URL Scheme配置成功！
+
+例如：假设一个包的包名为：com.test.example ；
+则配置对应的URL scheme： com.test.example；
+deeplink调起的链接：com.test.example://oceanengine/ads?clickid=__CLICKID__&track_id=__TRACK_ID__（CLICKID 和 TRACK_ID 宏参数会根据调用场景替换对应的值）
+将上述deeplink链接复制到备忘录中，点击链接，成功跳转对应的应用；
+
+4.2.1.4 隐私数据获取说明
+以下用户数据由巨量引擎数据采集 iOS SDK收集，具体参数如下：
+必传参数：
+字段
+字段含义
+数据示例
+idfv
+
+供应商标识符 / identifierForVendor
+是开发者为应用指定的代码，设备上属于该开发者的所有应用都拥有同一个 IDFV。同一台设备上来自同一位开发者的应用具有相同的 IDFV 值。同一台设备上不同开发者的应用 IDFV 值不同
+080006E2-5666-49C1-8786-3FD9FC77DC0A
+
+idfa
+
+广告主标识符（Identifier for advertisers，IDFA）每台 iOS 设备独有的字母和数字组合
+IDFA 是 Apple 采用的标准，移动广告网络可以用它来跟踪用户，并投放定向广告。
+- iOS 10 及以上，用户如果开启了「限制广告跟踪」, 获取的 IDFA 将是一串 0。
+- iOS 14.5 及以上，默认无法获取 IDFA ，必须通过 ATTF 才能获取。
+41E94323-9AB3-4004-857E-D7690572D699
+
+sys_file_time
+系统更新时间
+
+1595214620.383940
+device_name
+
+设备名称
+
+MD5(iPhone)，ios16以后建议传固定值：867e57bd062c7169995dc03cc0541c19
+machine
+设备machine（device_model）
+iPhone10,3
+model
+Hardware model
+D22AP
+boot_time_in_sec
+系统启动时间（秒）
+1595643553
+system_version
+系统版本
+14.0
+memory
+物理内存大小
+3955589120
+disk
+硬盘大小
+63900340224
+mnt_id
+
+挂载id
+
+80825948939346695D0D7DD52CB405D11A80344027A07803D5F8410346398776C879BF6BD67627@/dev/disk1s1
+device_init_time
+设备初始化时间
+1632467920.301150749
+client_tun
+
+tun
+
+fe80::d93e:a3d7:6f3d:965c,fe80::df78:367d:c4dc:23c4,fe80::7daa:f458:a18c:bb3b,fe80::ce81:b1c:bd2c:69e,fe80::356:6d1a:5a96:acbb
+client_anpi
+anpi
+fe80::8c3c:53ff:fe8a:489a
+IPV4
+公网ipv4
+1.2.3.4
+IPV6
+公网ipv6
+240e:478:5618:b87a:100b:6ecc:bb9a:707a
+UA
+
+系统webview user agent
+
+Mozilla/5.0 (iPhone; CPU iPhone OS 16_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148
+
+package_name
+应用包名
+
+app_version
+应用版本
+
+local_time
+本地时间
+
+可选参数：
+其他参数
+params
+自定义参数
+
+user_unique_id
+用户唯一id
+4.2.1.5 其他功能
+延时上报
+为了兼容不同应用隐私协议初始化逻辑的不同，SDK支持了延时上报的能力。
+用户可以调用以下方法进行开启，开启后，需调用开始方法，SDK才会进行采集数据上报。
+// 开启延时上报
+[BDASignalManager enableDelayUpload];
+
+// 允许数据上报
+[BDASignalManager startSendingEvents];
+获取clickid
+#import "BDASignalManager.h"
+
+[BDASignalManager getClickId];
+
+可选参数采集
+支持用户通过以下key，上报隐私数据获取中的可选参数。
+FOUNDATION_EXTERN NSString * _Nonnull const kBDADSignalSDKUserUniqueId; 
+可选参数注入方式如下：
+#import "BDASignalManager.h"
+#import "BDASignalDefinitions.h"
+
+[BDASignalManager registerWithOptionalData:@{
+    kBDADSignalSDKUserUniqueId : @"3y48693232",  // uuid（是业务内部的用户uid，非必传。如果传了后续巨量可根据uid做相关逻辑，比如uid维度的去重）
+    @"extra_param" : @"xxx",                     // 其他用户自定义参数
+}];    
+  
+自定义事件上报（可选）
+支持通过巨量引擎转化SDK上报关键事件，转化SDK内置如下自定义上报能力，也可支持广告主上报自定义事件：
+事件
+含义
+launch_app
+启动事件
+stay_time
+停留时长
+register
+注册
+purchase
+付费
+game_addiction
+关键行为
+自定义事件（事件名自定义）
+自定义事件
+FOUNDATION_EXTERN NSString * _Nonnull const kBDADSignalSDKEventStayTime;
+FOUNDATION_EXTERN NSString * _Nonnull const kBDADSignalSDKEventRegister;
+FOUNDATION_EXTERN NSString * _Nonnull const kBDADSignalSDKEventPurchase;
+FOUNDATION_EXTERN NSString * _Nonnull const kBDADSignalSDKEventGameAddiction;
+使用方式如下：
+#import "BDASignalManager.h"
+#import "BDASignalDefinitions.h"
+
+// 上报注册事件
+[BDASignalManager trackEssentialEventWithName:kBDADSignalSDKEventRegister params:@{
+}];
+
+// 上报付费事件
+[BDASignalManager trackEssentialEventWithName:kBDADSignalSDKEventPurchase params:@{
+    @"pay_amount" : 2334,                        // 用户支付金额，单位：分
+}];
+
+自定义事件上报使用方式如下：
+#import "BDASignalManager.h"
+#import "BDASignalDefinitions.h"
+
+// 上报自定义事件
+[BDASignalManager trackEssentialEventWithName:@"customLabel" params:@{
+    @"param1" : @"xxx"
+}];
+广告主需要额外从客户端采集：IDFV、clickid（通过SDK提供的接口获取，如果已经在使用deeplink可以添加__CLICKID__宏参会自动拼接）
+4.2.2 安卓
+广告主需要额外采集的参数：android_id
+历史版本（商业转化组件版本低于2.0.0的版本）也可正常完成改造，客户端接入流程参考附录
+4.2.2.1 SDK集成
+当前的SDK CPU架构仅支持 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+其中 'armeabi'架构正式版本暂未支持，预计4月初支持
+添加依赖
+远程依赖（推荐）
+1. 在project级别的build.gradle中添加maven仓库。
+在allprojects的repositories中添加maven仓库
+allprojects {
+    repositories {
+        maven {
+            url 'https://artifact.bytedance.com/repository/Volcengine/'
+        }
+        // 其他仓库
+    }
+}
+2. 在接入的组件的build.gradle文件中，在dependencies里引入SDK。
+// 1.X.X升级用户请注意
+// 融合归因优化方案不再依赖com.bytedance.applog:RangersAppLog-Lite-cn:6.16.9
+// 如果没有其他使用方可以删除该依赖,仅依赖com.bytedance.ads:AppConvert即可
+
+// 在build.gradle文件的dependencies中引入SDK
+implementation 'com.bytedance.ads:AppConvert:2.0.0'
+本地依赖
+推荐您远程引入SDK。如特殊情况需要手动引入，请补充阅读本小节。
+下载依赖文件
+暂时无法在飞书文档外展示此内容
+添加本地依赖配置
+- 将上述文件复制到工程的依赖文件夹中，比如app/libs
+- 在app/build.gradle文件（或者想要依赖的模块的build.gradle文件）的dependencies中添加如下项
+implementation fileTree(include: ['*.jar', '*.aar'], dir: '【libs文件夹路径】')
+- 示意图，可下载参考Demo辅助查看
+[图片]
+4.2.2.2 SDK使用
+接入方式A【推荐】
+SDK转化归因功能需要尽早上报启动事件，否则会造成归因失败，若您希望sdk初始化后尽快上报启动事件，您可采用以下方法，此时初始化后，SDK会自动发送启动事件。
+1. 在用户同意隐私政策后，调用init方法，要求传入当前前台的Activity（内部不做存储，不会发生内存泄漏），建议在子线程调用（但请不要使用协程）。此时会自动发送启动事件。
+再次强调，使用接入方法A初始化后会自动发送启动事件，所以会采集设备信息，请在用户同意隐私政策后调用
+public class MainActivity extends AppCompatActivity {
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        Context context = this;
+        Activity activity = this;
+        Button buttonConfirm = findViewById(R.id.bt_confirm_private);
+        if(isUserAlreadyConfirm()){
+            // 如果之前用户已经同意隐私政策，则直接执行
+            BDConvert.INSTANCE.init(context, activity);
+        }
+        buttonConfirm.setOnClickListenner(view -> {
+            // 用户点击同意隐私政策，执行
+            BDConvert.INSTANCE.init(context, activity);
+        })
+    }
+}
+2. 此时为默认配置，如果想要自定义配置，可以参考下文「初始化可选Config配置」，并将config对象传入init方法。需要注意不要将autoSendLaunchEvent设置为false。
+
+接入方式B（单独初始化）
+1. 在Application#OnCreate时，构造BDConvertConfig，配置config.setAutoSendLaunchEvent(false)，随后调用init方法，要求传入必须在主线程初始化，否则会初始化失败。
+public class TheApplication extends Application {
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        Application application = this；
+        BDConvertConfig config = new BDConvertConfig();
+        // 配置不自动发送事件
+        config.setAutoSendLaunchEvent(false);
+        BDConvert.INSTANCE.init(application, config);
+    }
+}
+2. 在用户同意隐私政策后，调用sendLaunchEvent方法发送启动事件，不要求在主线程调用（但请不要使用协程）。
+调用sendLaunchEvent后，会采集设备信息，请在用户同意隐私政策后调用
+public class MainActivity extends AppCompatActivity {
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        Context context = this;
+        Activity activity = this;
+        Button buttonConfirm = findViewById(R.id.bt_confirm_private);
+        if(isUserAlreadyConfirm()){
+            // 如果之前用户已经同意隐私政策，则直接执行    
+            BDConvert.INSTANCE.sendLaunchEvent(context);
+        }
+        buttonConfirm.setOnClickListenner(view -> {
+            // 用户点击同意隐私政策，执行
+            BDConvert.INSTANCE.sendLaunchEvent(context);
+        })
+    }
+}
+初始化可选Config配置
+根据需要配置Config对象，并将Config传入init方法即可，默认情况下无需配置，供特殊情况使用。
+BDConvertConfig config = new BDConvertConfig();
+// 在调用init时是否自动上报事件，默认为true，
+config.setAutoSendLaunchEvent(true);
+// 是否开启debug日志，默认为false，在排查问题时使用,参考：https://bytedance.larkoffice.com/docx/D99KdC7VXoMmarxIza6cAFKDnhe
+config.setEnableLog(false);
+// 是否启用心跳事件，默认为true
+config.setPlaySessionEnable(true);
+// SDK是否采集OAID，默认为true
+config.setEnableOAID(true);
+// 配置自定义OAID获取逻辑，默认不配置；若配置，则SDK自身不会有采集OAID的行为，会调用这个Callback获取
+config.setCustomOaidCallback(() -> {
+    return "自定义OAID获取";
+});
+// 配置自定义Android_id获取逻辑，默认不配置；若配置，则SDK自身不会有采集android_id的行为，会调用这个Callback获取
+// 请正确回传Android_id值，错误传值会导致归因失败
+config.setCustomAndroidIDCallback(() -> {
+    return "自定义Android_ID获取";
+});
+深度转化事件上报
+// 注册
+ConvertReportHelper.onEventRegister("wechat",true);
+
+/**
+ * 付费事件
+ * @param contentType 内容类型。
+ * @param contentName 内容名称。
+ * @param contentId 内容ID。
+ * @param contentNumber 内容数量。
+ * @param paymentChannel 支付渠道。
+ * @param currency 货币类型。
+ * @param isSuccess 购买是否成功。
+ * @param currencyAmount 货币金额。
+ */
+ConvertReportHelper.onEventPurchase("gift","flower", "008", 1, "wechat","¥", true, 1);
+
+// 自定义事件
+JSONObject custom = new JSONObject();
+try {
+    custom.put("test", "test");
+} catch (JSONException e) {
+
+}
+ConvertReportHelper.onEventV3("custom_event", custom);
+
+// 关键行为
+JSONObject gameAddiction = new JSONObject();
+try {
+    gameAddiction.put("origin_event", "原始事件名称");
+} catch (JSONException e) {
+
+}
+
+ConvertReportHelper.onEventV3("game_addiction", gameAddiction);
+4.2.2.3 常见问题
+巨量引擎转化sdk检测自查文档
+4.2.2.4 参考Demo
+Java版本
+暂时无法在飞书文档外展示此内容
+Kotlin版本
+暂时无法在飞书文档外展示此内容
+4.3窗口期配置
+在应用管理上传APP后，需配置：
+- 激活去重窗口期（默认30天）
+  - 可选窗口期：1、7、15、30、60、90、120、180天
+页面功能暂未上线，若有窗口期配置需求，广告主可以通过对接销售申报上述配置。
+4.4.服务端归因逻辑
+改造前建议花3分钟，前置观看归因改造指导视频：
+暂时无法在飞书文档外展示此内容
+4.4.1 广告主侧归因方案
+建议广告主按照推荐归因方案，以“触点无设备信息依然可以完成归因”为目标进行归因设计改造；
+[图片]
+
+详细步骤
+step1：用户下载APP激活并上报到服务端
+通过APP从客户端获取：
+1.  IOS：IDFV
+2. 安卓：ANDROID_ID
+step2：服务端请求巨量实时归因接口，获取归因结果和相关数据（接口返回时延1s内）
+新增修改点
+
+1. 使用激活设备的IDFV/ANDROID_ID原值、PACKAGE_NAME请求巨量实时归因接口
+- IDFV需要采集最新的IDFV，不能使用keychain缓存IDFV
+  - 用户卸载重装后IDFV会发生变更，此时需要采集变更后的IDFV传给实时归因接口；采用keychain缓存过去的IDFV上报是无法生效的
+2. 拿到接口结果和数据，需着重关注以下数据：
+  1. 获取时间参数: __LAST_TOUCH_TIME__
+  2. 获取转化回传CALLBACK：__CALLBACK_PARAM__)
+若调取接口返回失败，广告主可再次调取，初始激活3小时内广告主若多次调接口，巨量会多次返回相同的数据；
+若距离初始激活超过3小时，在下一次激活去重窗口期内，若广告主调用巨量接口，则巨量接口会返回报错提示该用户是已激活用户；
+“新增用户”与“回流激活”均需要请求归因接口
+  - “新增用户”指的是用户初次下载激活APP
+  - “回流用户”指的是用户新增之后，经过客户认为的窗口期没有产生过活跃，再次活跃时算作激活可以给广告进行归因。这两个时机需要客户请求实时归因接口。
+step3: 根据设备ID寻找最后一次触点时间和CALLBACK
+1. 根据设备id匹配触点，找到最后一次触点，并储存最后一次触点时间和__CALLBACK_PARAM__
+step4: 比对巨量last_touch_time和最后一次触点时间
+新增修改点
+1. 对比巨量实时归因接口返回的__LAST_TOUCH_TIME__和根据触点找到的最后一次触点时间，储存更靠后的时间对应的__CALLBACK_PARAM__；
+
+step5：转化CALLBACK回传
+
+1. 将激活和后续产生的深度转化通过储存的__CALLBACK_PARAM__进行回传；
+
+- 完成修改后，巨量渠道归因不再依赖触点监测中的设备id，建议以“触点无设备信息依然可以完成归因”为目标进行归因方案设计改造；
+- 若用户激活携带了clickid(即接口下发is_dp_open=TRUE)，代表用户是通过Deeplink链接从巨量APP内下载并打开推广APP，建议可以直接归给巨量；
+- 广告主侧采集的激活和巨量接口下发的激活信息关联建议
+  - IOS使用adv_idfv
+  - 安卓使用adv_androidid
+- 巨量侧接口下发的激活转化和其他触点关联建议使用track_id
+4.4.2 典型错误修改方式示例：
+以下错误的归因修改方案均不能拿到全量的归因收益，也不符合修改要求，方案设计避免出现下述情况！
+暂时无法在飞书文档外展示此内容
+暂时无法在飞书文档外展示此内容
+暂时无法在飞书文档外展示此内容
+4.4.3 巨量实时归因接口
+接口地址：https://analytics.oceanengine.com/sdk/app/attribution
+请求方式：POST
+content-type: applicaiton/json
+请求参数 ：
+{
+    "platform": "ios",  // ios或android
+    "idfv": "xxxx-xxxx-xxxx-xxxx",  // 仅ios需要
+    "android_id": "xxxxxxxxxxxxxxxx" // 仅android需要
+    "package_name": "com.test.demo"
+    "customer_active_time": "1722938240000" // 毫秒时间戳，客户激活归因时间点
+}
+返回结果 ：
+{
+    "code": 0,
+    "message": "成功",
+    "adv_idfv": "xxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxx",
+    "adv_android_id": "",
+    "is_dp_open": false,
+    "activation_window": 30,
+    "active_time": 123123123,
+    "active_touch_time": 123123123,
+    "last_touch_time": 123123123,
+    "project_id": 123123123123123,
+    "project_name": "xxxxxxxx",
+    "promotion_id": 123123123123123,
+    "promotion_name": "xxxxxxxxxxxxxx",
+    "aid": 0,
+    "aid_name": "",
+    "cid": 0,
+    "cid_name": "",
+    "advertiser_id": 232323232323,
+    "req_id": "xxxxxxxxxxxxxxxxxxxxxxxx",
+    "track_id": "xxxxxxxxxxxxxxxxxx",
+    "callback_param": "xxxxxxxxxxxxxxxxxxxxxxxx",
+    "callback_url": "http://ad.toutiao.com/track/activate/?callback=xxxxxxxxxxxxxxxxxxxxx&os=1",
+    "mid1": 123123123,
+    "mid2": 123123123123123,
+    "mid3": 123123123,
+    "mid4": 123123123,
+    "mid5": 123123123,
+    "mid6": 123123132,
+    "active_track_url": "http://xxxxxx",  
+    "action_track_url": "http://xxxxxx",
+    "convert_source": "ad",
+    "demand_id": 1231231,
+    "item_id": 13123123  
+}
+错误码及说明 
+code
+message
+说明
+0
+成功
+归因成功（包括归因给巨量和非巨量的转化）
+10
+归因失败，请重试
+服务错误，请重试
+100
+请求参数错误
+参数字段错误，请更正
+202
+归因中，请重试
+归因过程中，暂未完成，重试即可
+203
+已归因转化，请求已过窗口期
+
+该设备非首次激活，已过归因窗口期，之前归因到的转化已返回或者通过激活监测已下发，请获取之前的结果
+204
+
+未找到sdk上报的事件，请稍后重试
+
+sdk采集的打开事件未获取到，可能是归因结果调用较早，请等待客户端sdk事件上报成功后重试
+curl示例 
+# IOS
+curl -X POST 'https://analytics.oceanengine.com/sdk/app/attribution' \
+-H 'Content-Type: application/json' \
+-d '{
+    "platform": "ios",
+    "package_name": "com.zhangyue.zyiReader.iReaderDejian",
+    "idfv": "73D60953-EC44-44CB-AA05-6964F5BAE89B"
+}'
+
+# 安卓
+curl -X POST 'https://analytics.oceanengine.com/sdk/app/attribution' \
+-H 'Content-Type: application/json' \
+-d '{
+    "platform": "android",
+    "package_name": "com.zhangyue.zyiReader.iReaderDejian",
+    "android_id": "6964F5BAE89B"
+}'
+4.4.4 接口返回字段
+字段
+类型
+默认值
+说明
+adv_idfv
+string
+""
+广告主app采集到的idfv
+adv_android_id
+string
+""
+广告主app采集到的androidid
+is_dp_open
+bool
+false
+用户是否通过deeplink直接吊起激活，也代表是否有clickid注入
+activation_window
+int32
+0
+激活窗口期，天（默认30天，广告主可配置，可用于校验当前归因窗口期）
+active_time
+int64
+0
+app激活时间，unix时间戳，秒
+last_touch_time
+
+int64
+
+0
+激活前最后一个触点时间，unix时间戳，秒（如果是clickid注入场景，该字段不会替换）
+callback_param
+
+string
+""
+一些跟广告信息相关的回调参数，内容是一个加密字符串，用于回传激活和深度转化事件
+callback_url
+string
+""
+直接把调用事件回传接口的url生成出来，广告主可以直接使用
+promotion_name
+string
+""
+巨量广告升级版中的广告名称
+promotion_id
+int64
+0
+巨量广告升级版中的广告ID
+project_id
+int64
+0
+巨量广告升级版中的项目ID
+project_name
+string
+""
+巨量广告升级版中的项目名称
+advertiser_id
+int64
+0
+广告主id/账户id
+aid
+int64
+0
+广告id
+aid_name
+string
+""
+广告计划名称
+cid
+int64
+0
+创意id
+cid_name
+string
+""
+创意名称
+req_id
+string
+""
+一次广告请求的id（非广告唯一标识）
+track_id
+string
+""
+send出的广告唯一标识，可以用来串联同一广告不同行为
+mid1
+int64
+0
+针对巨量广告升级版，图片素材宏参数（下发原始素材id）
+mid2
+int64
+0
+针对巨量广告升级版，标题素材宏参数（下发原始素材id）
+mid3
+int64
+0
+针对巨量广告升级版，视频素材宏参数（下发原始素材id）
+mid4
+int64
+0
+针对巨量广告升级版，搭配试玩素材宏参数（下发原始素材id）
+mid5
+int64
+0
+针对巨量广告升级版，落地页素材宏参数（下发原始素材id）
+mid6
+int64
+0
+针对巨量广告升级版，安卓下载详情页素材宏参数（下发原始素材id）
+csite
+int64
+0
+归因到的触点对应广告投放点位信息
+active_track_url
+string
+""
+投放的原始的激活监测链接（某些广告主会带一些定制参数，方便透传）
+action_track_url
+string
+""
+投放的原始的有效触点监测（某些广告主会带一些定制参数，方便透传）
+convert_source
+string
+""
+表示转化的来源，ad表示字节广告，others表示其他渠道
+demand_id
+int64
+0
+星图任务id（同监测链接上__DEMAND__）
+item_id
+int64
+0
+星图视频id（同监测链接__ITEM_ID__）
+4.4.5 转化上报
+为了更精准的识别广告主归因结果优化模型效果，巨量引擎对于应用下载场景下的转化上报做如下更新：转化上报接口需新增转化设备由广告主app采集到（非触点监测中下发）的idfv（ios）、android_id（android）。广告主根据当前使用接口情况，新增字段回传（激活转化必须上报idfv，非激活转化如付费不强制校验但建议一并回传）。
+注意：无论是通过实时归因接口的callback还是通过监测链接的callback回传的转化都需要回传对应的idfv/android_id
+Conversion接口(推荐)
+接口文档
+接口地址：https://analytics.oceanengine.com/api/v2/conversion
+请求方式：POST
+回传示例：
+iOS：
+{ 
+    "event_type": "active",  
+    "context": { 
+        "ad": { 
+            "callback": "demo_callback"
+        }, 
+        "device": { 
+            "platform": "ios", 
+            "idfv": "FCD369C3-F622-44B8-AFDE-12065659F34B"
+        } 
+    }, 
+    "timestamp": 1604888786102 
+} 
+Android：
+{ 
+    "event_type": "active",  
+    "context": { 
+        "ad": { 
+            "callback": "demo_callback"
+        }, 
+        "device": { 
+            "platform": "android", 
+            "android_id": "abaca12312"
+        } 
+    }, 
+    "timestamp": 1604888786102 
+} 
+ 
+标绿部分为新增字段
+https://bytedance.larkoffice.com/sync/OBAWdwelosoSZXbvycic0TrwnAd
+老接口（优先建议使用Conversion接口，老接口后续可能下线）
+接口文档
+接口地址：https://ad.oceanengine.com/track/activate/
+请求方式：GET
+回传示例：
+iOS:
+https://ad.oceanengine.com/track/activate/?callback=demo_callback==&event_type=0&idfv=FCD369C3-F622-44B8-AFDE-12065659F34B
+Android:
+https://ad.oceanengine.com/track/activate/?callback=demo_callback==&event_type=0&android_id=abaca12312
+标绿部分为新增字段
+4.5 SDK联调
+
+步骤描述
+相关截图
+Step 0
+- 安卓开始联调前，建议先完成SDK数据检测（IOS无需数据检测)
+
+安卓为保证clickid成功注入，建议开发完成后先进行SDK数据检测，再发版（平台更新包）后进行联调
+在应用管理平台完成SDK数据检测
+1. 进入投放平台-资产-移动应用界面，进入应用管理平台，添加应用，并完善应用相关信息；
+[图片]
+2. 进入SDK检测tab，输入应用的相关信息，点击“去检测”tab进入检测界面
+  1. IOS包无法自动生成APPID，可以选择“前往创建”手动创建；
+[图片]
+- 在该页面停留，打开集成过SDK的APP，观察界面上是否检测到launch_app事件上报，监测到则集成成功；
+[图片]
+注意⚠️：
+- 所有应用必须通过首次检测，才可进行后续的联调、投放操作
+- 应用通过首次检测后，为保证投放效果，建议每次打包、更新包、分包后均需再次检测；再次检测失败不影响联调及投放
+step1
+
+- 进入投放平台-资产-事件管理，添加资产，选择安卓或iOS应用：
+  - 安卓应用需要选择在应用管理中心创建的应用
+  - IOS需要填写应用的下载链接（iOS的特殊场景参考下表）
+[图片]
+
+[图片]
+[图片]
+
+Step 2
+- 进入监测链接tab-点击添加监测链接组-添加有效触点监测链接（API回传方式下，有效触点监测链接必填）
+
+[图片]
+[图片]
+
+step3
+
+- 创建资产后，添加需要回传的所有事件，并选择事件的回传方式【应用API回传】
+
+[图片]
+[图片]
+
+step4
+
+- 点击联调工具tab-开始联调-选择联调方式：融合归因方案，勾选需要联调的事件，进入联调
+
+
+[图片]
+
+[图片]
+step 5
+- 安卓：默认展示下载链接，选择监测链接组后进入下一步
+- IOS：默认展示下载链接，选择监测链接组后进入下一步
+  - “下载链接联调”通过后才算联调通过，建议优先使用该场景进行联调，
+  - 有”直达链接联调“需求可以后续单独联调，直达链接联调只上报APP打开事件（注意：只有进行直达链接联调后，才能生效clickid注入功能，有clickid注入需求的广告主请同时完成“直达链接联调”）
+
+- 安卓：
+[图片]
+- IOS：
+[图片]
+
+Step 6
+- 通过抖音扫码完成预览广告授权
+- “刷抖音”直到出现联调广告（如果没有刷到联调广告，可重新打开抖音尝试）
+[图片]
+[图片]
+
+step7
+
+- 安卓：点击联调广告，跳转商店下载，期间一直保持抖音运行，安装完成后通过自动拉起APP弹窗吊起；
+- IOS：点击联调广告，拉起APP STORE应用下载九分屏，点击下载APP，完成下载后从桌面打开对应APP
+[图片]
+
+Step9
+
+- IOS端直达链接联调（非必要）
+  - 点击联调广告，拉起APP STORE应用下载九分屏，点击下载APP，并在该界面停留5秒以上（如果APP已经安装完成不要点击打开）；
+  - 点击完成将九分屏收起-回到抖音界面-收到下载完成后自动打开APP弹窗-点击“确定”授权
+  - 授权后继续刷抖音，直到调起打开推广APP；（在完成调起前，切勿切出抖音APP，否则调起会被终止；）
+
+[图片]
+[图片]
+[图片]
+
+Step9
+- 在APP中发生激活等相关行为，关注联调界面，看对应事件上报监测情况：
+  - 若页面显示所有事件回传正常，代表通过联调
+  - 若页面一直显示检测中，代表当前回传仍有问题，参考右边“建议操作”完成联调
+
+
+
+
+
+[图片]
+
+4.6 改造结果追踪
+改造过程中，可在投放平台【事件管理】的【融合归因】页面查看当前改造状态，如果存在问题&建议，请根据建议和明细case进行排查，页面日维度更新状态
+对于建议部分如有疑问可查看融合归因方案常见问题汇总
+[图片]
+五、已适配巨量融合归因三方介绍
+已支持三方服务商
+客户侧接入融合归因所需动作
+热云
+- SDK接入：需客户侧完成巨量SDK对接并发版，IOS详见4.2.1；安卓详见4.2.2
+- 归因改造：可联系热云对接人员进行加白，客户侧无需开发
+AdSpark（穿山甲）
+- SDK接入：接入AdSpark兼容版SDK发版
+- 归因改造：联系AdSpark加白SDK归因开关并开启，完成联调
+具体流程详见AdSpark 免费监测 | 兼容巨量融合归因_公测使用手册
+引力引擎
+- SDK接入：需客户侧完成巨量SDK对接并发版，IOS详见4.2.1；安卓详见4.2.2，同时需要升级引力SDK到最新版（Android 4.8.9及以上，iOS 4.8.4及以上）
+- 归因改造：需要在引力后台-设置-应用管理-配置-融合归因配置中打开融合归因开关
+[图片]
+TalkingData
+- SDK接入：需客户侧完成巨量SDK对接并发版，IOS详见4.2.1；安卓详见4.2.2
+- 归因改造: 需要在Ad Tracking平台-产品设置-渠道归因配置-巨量引擎渠道中打开融合归因开关
+[图片]
+神策
+- SDK接入：需客户侧完成巨量SDK对接并发版，IOS详见4.2.1；安卓详见4.2.2
+- 归因改造：可联系神策对接人员进行加白，客户侧无需开发
+六、问题解决路径
+1. 自助查看FAQ文档融合归因方案常见问题汇总
+2. 巨量广告平台-事件管理处咨询智投星
+[图片]
+3. 提报工单：融合归因产品工单提报流程
+
+七、附录
+安卓商业转化组件2.0.0版本以下客户端接入流程
+巨量引擎转化SDK开发者使用合规规范24.8
+巨量引擎转化sdk隐私政策_2024.6
+广告主需要额外采集的参数：android_id
+4.2.2.1 SDK集成
+引入仓库
+在project级别的build.gradle中添加maven仓库。
+在allprojects的repositories中添加maven仓库
+allprojects {
+    repositories {
+        maven {
+            url 'https://artifact.bytedance.com/repository/Volcengine/'
+        }
+        // 其他仓库
+    }
+}
+导入SDK
+https://bytedance.larkoffice.com/sync/ZAYQd7PKesN4Y8bvjNZcX3Ubn3c
+手动引入
+https://bytedance.larkoffice.com/sync/BHbQdxfrNswqHEb3l5pcFOhBnvd
+4.2.2.2 SDK初始化
+获取appid
+在开始集成前，首先需要在应用管理中心中, 上传应用获取到的appid；
+初始化SDK
+https://bytedance.larkoffice.com/sync/HXBhdLrdesFaffbTY5Jcd9GfnZg
+4.2.2.3 SDK使用方式
+获取android_id（可选）
+//在 Android 上获取 Android ID 可以使用以下代码：
+import android.content.Context;
+import android.provider.Settings;
+
+public class AndroidIdUtils {
+    public static String getAndroidId(Context context) {
+        return Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
+    }
+}
+4.2.2.4常见问题汇总
+1. 出现找不到方法、找不到值的报错
+如果App出现找不到方法的报错，有可能是有方法被工程的打包优化掉了导致找不到：
+java.lang.NoSuchMethodError:nostaticornon-staticmethod
+"Lcom/bytedance/ads/convert/broadcast/common/EncryptionTools;
+.bytesToHex([B)Ljava/lang/String;
+需要在混淆配置文件中增加：
+-keep class com.bytedance.ads.convert.broadcast.common.EncryptionTools {*;}
+2. 出现类重复的报错
+[图片]
+6.16.3 版本对于荣耀 oaid 获取文件混淆配置可能会和荣耀官方 sdk 冲突，建议升级到稍高的版本6.16.9（对该问题已进行了兼容和修复）
+- 对于远程依赖，可以直接修改依赖的版本号为6.16.9
+implementation 'com.bytedance.applog:RangersAppLog-Lite-cn:6.16.9'
+- 对于手动依赖，可以使用下面的aar
+暂时无法在飞书文档外展示此内容
