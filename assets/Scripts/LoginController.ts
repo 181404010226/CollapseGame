@@ -6,6 +6,7 @@ import { ApiConfig, UserData } from '../API/ApiConfig';
 import { LoginService, LoginResponse } from '../API/LoginService';
 import { GameProgressManager } from './GameProgressManager';
 import { OnlineTimeManager } from './任务中心/OnlineTimeManager';
+import { track, TrackEventType, umengSDK } from '../API/UmengSDK';
 
 const { ccclass, property } = _decorator;
 
@@ -104,6 +105,9 @@ export class LoginController extends Component {
     start() {
         // 初始化状态
         this.updateLoginButtonsState();
+        
+        // 友盟埋点：登录页曝光
+        track(TrackEventType.LOGIN_PAGE_EXPOSURE);
         
         // 添加调试快捷键（仅在开发环境使用）
         if (typeof window !== 'undefined') {
@@ -212,6 +216,9 @@ export class LoginController extends Component {
      * 显示用户服务协议
      */
     private onShowUserAgreement() {
+        // 友盟埋点：登录页协议点击（用户协议）
+        track(TrackEventType.LOGIN_AGREEMENT_CLICK, { agreement_type: 'user', agreement_text: '用户协议' });
+        
         if (this.agreementDialogController) {
             this.agreementDialogController.showAgreementByType('user');
         } else {
@@ -223,6 +230,9 @@ export class LoginController extends Component {
      * 显示隐私协议
      */
     private onShowPrivacyAgreement() {
+        // 友盟埋点：登录页协议点击（隐私协议）
+        track(TrackEventType.LOGIN_AGREEMENT_CLICK, { agreement_type: 'privacy', agreement_text: '隐私协议' });
+        
         if (this.agreementDialogController) {
             this.agreementDialogController.showAgreementByType('privacy');
         } else {
@@ -237,6 +247,12 @@ export class LoginController extends Component {
         this.isAgreed = !this.isAgreed;
         this.updateCheckboxVisual();
         this.updateLoginButtonsState();
+        
+        // 友盟埋点：登录页授权点击（勾选状态）
+        track(TrackEventType.LOGIN_AUTHORISATION_GRANT_CLICK, { 
+            is_checked: this.isAgreed.toString(), 
+            action: this.isAgreed ? '勾选' : '取消勾选' 
+        });
     }
 
     /**
@@ -284,6 +300,9 @@ export class LoginController extends Component {
      * 微信登录按钮点击事件
      */
     private async onWechatLogin() {
+        // 友盟埋点：登录页访问模式点击（微信登录）
+        track(TrackEventType.LOGIN_ACCESS_MODE_CLICK, { access_mode: 'wechat', mode_text: '微信登录' });
+        
         if (!this.isAgreed) {
             console.log("请先同意用户协议");
             return;
@@ -339,6 +358,9 @@ export class LoginController extends Component {
      * 游客登录
      */
     private async onGuestLogin() {
+        // 友盟埋点：登录页访问模式点击（游客登录）
+        track(TrackEventType.LOGIN_ACCESS_MODE_CLICK, { access_mode: 'guest', mode_text: '游客登录' });
+        
         if (!this.isAgreed) {
             console.log("请先同意用户协议");
             return;
@@ -764,6 +786,4 @@ export class LoginController extends Component {
         
         this.onLoginSuccess(mockLoginResult);
     }
-
-
 }

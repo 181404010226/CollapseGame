@@ -1,0 +1,439 @@
+
+ 产品  付费服务 开发者中心  最新活动  品牌动态  合规专区 了解我们 
+任何关于友盟+产品的问题..
+ 
+个人中心 2
+
+
+
+文档中心>移动统计 U-App>Android集成>SDK集成>高级功能
+请输入关键字
+账号统计
+集成账号统计
+启用账号统计
+设置用户属性
+页面采集
+自动采集-AUTO模式
+手动采集-Manual
+自定义事件
+埋点接口
+注意事项
+子进程埋点
+流失卸载统计
+隐私合规授权结果上传
+采集开关接口
+高级功能
+账号统计
+集成账号统计
+设置上报用户上报后，在U-App中的应用及实践场景可参考文档：用户账号及用户属性
+
+【友盟+】在统计用户时以设备为标准，如果需要统计应用自身的账号，请使用以下接口：
+
+用户登录
+
+public static void onProfileSignIn(String ID);
+public static void onProfileSignIn(String Provider, String ID);
+参数
+
+含义
+
+ID
+
+用户账号ID，长度小于64字节
+
+Provider
+
+账号来源。如果用户通过第三方账号登录，可以调用此接口进行统计。支持自定义，不能以下划线”_”开头，使用大写字母和数字标识，长度小于32 字节; 如果是上市公司，建议使用股票代码。
+
+用户登出
+
+账号登出时需调用此接口，调用之后不再发送账号相关内容。
+
+public static void onProfileSignOff();
+示例：
+
+//当用户使用自有账号登录时，可以这样统计：
+MobclickAgent.onProfileSignIn("userID");
+//当用户使用第三方账号（如新浪微博）登录时，可以这样统计：
+MobclickAgent.onProfileSignIn("WB"，"userID");
+
+//登出
+MobclickAgent.onProfileSignOff();
+启用账号统计
+集成账号统计功能后，请进入后台选择“应用”-设置-应用信息-修改，启动账号统计，如下图：
+
+20210811114001如果您集成了新版SDK的账号接口，可以通过启动账号统计开关，来开启账号报表的展现。账号统计报表开关仅作用于报表的展现，不影响数据的计算。您可以根据实际的需要来启动或者暂停该功能。集成此功能的第二天才能在后台报表看见账号的数据。可在下图所示位置查看:
+
+20210811120656
+
+设置用户属性
+接口类：
+
+com.umeng.analytics.MobclickAgent;
+接口函数：
+
+/** 
+* 设置预置用户属性(电话号码)
+* 参数:mobile 电话号码
+*/
+public static void userProfileMobile(String mobile)
+
+/**
+* 设置预置用户属性(邮箱)
+* 参数:email 邮箱
+*/
+public static void userProfileEMail(String email)
+
+/**
+* 设置用户自定义属性（键值对）
+* 参数：key 键；val 值。
+*/
+public static void userProfile(String key, Object val)
+重要
+用户属性设置接口一定要在账号登入接口MobclickAgent.onProfileSignIn()调用之后调用。
+只支持最多20个用户自定义属性设置，超出20个后的key设置无效。
+设置自定义用户属性，同一个 key 多次设置时，value 值会进行覆盖替换。
+用户自定义属性参数要求：
+
+参数
+
+参数类型
+
+描述
+
+备注
+
+key
+
+String
+
+自定义属性键
+
+小于128字节，允许：英文([a-z;A-Z])、数字(0-9)、下划线 进行定义，使用其中一种或者几种都可以。 不允许：不能以“数字”、"_"开头
+
+val
+
+String、Integer、
+
+Long、Short、
+
+Float、
+
+Double
+
+自定义属性值
+
+当自定义属性值为String类型值时，值必须小于256字节。
+
+示例代码：
+
+MobclickAgent.onProfileSignIn("example_id", "uid");
+MobclickAgent.userProfileMobile("13387538888");
+MobclickAgent.userProfileEMail("developer@gmail.com");
+MobclickAgent.userProfile("key111", "val111");
+MobclickAgent.userProfile("key222", 123457878L);
+MobclickAgent.userProfile("key333", (Double)0.0234);
+页面采集
+页面采集分为两种模式：自动采集（仅采集activity）和手动采集（支持activity和非activity）。页面采集模式选择需要和预初始化一起。
+
+采集模式选择接口：
+
+// 自动采集选择
+MobclickAgent.setPageCollectionMode(MobclickAgent.PageMode.AUTO);
+
+//手动采集选择
+MobclickAgent.setPageCollectionMode(MobclickAgent.PageMode.Manual);
+自动采集-AUTO模式
+如果开发者选择了自动采集模式，无需做任何则在页面埋点，在App下次启动时，会默认上报本次App使用的所有activity页面信息。判断activity页面的启动、退出方式如下：
+
+页面进入：Activity页面onResume函数；
+
+页面退出：Activity页面onPause函数；
+
+页面名称：Activity路径；
+
+页面访问时长：监听到onResume函数和onPause函数的时刻差。
+
+只要选择了自动采集模式，就会上报所有的页面访问信息，如果不使用该功能可以选择手动采集模式，可减少App端用户流量。
+
+例子：
+
+public class UmengApplication extends Application {
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        // 初始化SDK
+        UMConfigure.init(this, "5ab2xxxxxxxxxxxxx002f8", "Umeng", UMConfigure.DEVICE_TYPE_PHONE, null);
+        // 选用AUTO页面采集模式
+        MobclickAgent.setPageCollectionMode(MobclickAgent.PageMode.AUTO);
+手动采集-Manual
+如果需要统计非activity页面，例如fragment、自定义View等，则需要选择手动采集。手动采集模式不会采集activity信息，仅采集开发者埋点页面的信息，埋点接口为：
+
+定义页面进入
+
+public static void onPageStart(String viewName);
+定义页面退出
+
+public static void onPageEnd(String viewName);
+参数
+
+含义
+
+viewName
+
+自定义页面名。
+
+注意：以上接口对于一个页面必须成对调用！！！ 不同页面间仅支持串行调用！！！
+
+手动统计Fragemnt页面的例子代码：
+
+// Fragment页面onResume函数重载
+public void onResume() {
+    super.onResume();
+    MobclickAgent.onPageStart("MainScreen"); //统计页面("MainScreen"为页面名称，可自定义)
+
+}
+
+// Fragment页面onResume函数重载
+public void onPause() {
+    super.onPause();
+    MobclickAgent.onPageEnd("MainScreen");
+}
+自定义事件
+埋点接口
+自定义事件可以用于追踪用户行为，记录行为发生的具体细节。
+
+使用onEventObject接口进行事件的统计，参数值可以是如下几种类型之一：String、Long、Integer、Float、Double、Short。
+
+接口:
+
+public static void onEventObject(Context context, String eventID, Map<String, Object>map)
+参数说明
+
+参数
+
+含义
+
+context
+
+当前宿主进程的ApplicationContext上下文。
+
+eventID
+
+为当前统计的事件ID。
+
+map
+
+对当前事件的参数描述，定义为“参数名:参数值”的HashMap“<键-值>对”。
+
+eventID：自定义事件ID，指一个操作 例如：您可定义“pause”或“play”作为一个事件。您也可更加具体，创建一个“music_willbe_finished”的事件，并设定在音乐播放了 90% 的那一刻触发；
+
+key：自定义事件下的参数，一个可选的描述符，用于定义事件操作的属性信息 例如，您可以定义“music_style”或“singer_name”作为“play”事件的参数，也可以定义“play_time”作为事件的参数。
+
+value：自定义事件参数下的参数值，用于描述事件属性的详细信息。 例如，“play”事件下“music_style”的参数值可以是“slight”、“rock”等。数值型参数的取值是数字变量。值可以是明确的数字，如“23”；也可以是在其他位置定义的基于推断值的变量，如“downloadTime”。
+
+示例：
+
+Map<String, Object> music = new HashMap<String, Object>();
+music.put("music_type", "popular");//自定义参数：音乐类型，值：流行
+music.put("singer", "JJ"); //歌手：(林俊杰)JJ
+music.put("song_name","A_Thousand_Years_Later"); //歌名：一千年以后
+music.put("song_price",100); //价格：100元
+MobclickAgent.onEventObject(this, "play_music", music);
+备注：
+
+多参数类型事件能满足原来计算事件/计数事件的分析场景；
+
+对于计算型事件不同的参数类型对应不同的计算方式，总共可以分为两大类，数值型和字符型
+
+数字型：支持累加值、最大值、最小值、平均值和去重数计算
+
+字符型：支持去重数计算
+
+参数类型根据第一次上传的参数类型为准，后续即使App工程上更改，也无法改变，只能创建新的参数。
+
+注意事项
+自定义事件ID不可更改，需与代码中“String event_id”保持一致，参数（key）无须手动注册；
+
+请在SDK初始化之后调用事件统计接口；
+
+event id长度不能超过1024个字节，key不能超过4096个字节，当自定义属性值value为数组元素时，数组长度上限为100
+
+请不要将事件属性key以"_"开头。"_"开头的key属于SDK保留字
+
+id、ts、du、ds、duration、pn、token、device_name、device_model 、device_brand、country、city、channel、province、appkey、app_version、access、launch、pre_app_version、terminate、no_first_pay、is_newpayer、first_pay_at、first_pay_level、first_pay_source、first_pay_user_level、first_pay_version、type、是保留字段，不能作为event id 及key的名称；
+
+如果需要在子进程中对自定义事件进行统计，需要在SDK初始化完成后调用函UMConfigure.setProcessEvent。
+
+event ID或者key请使用英文、数字、下划线、中划线及加号进行定义，使用其中一种或者几种都可以，不能以“数字”开头，避免使用中文。具体限制请查看下文注意事项 为保证数据计算的准确性，非这些“合法”以外的字符无法添加，具体限制请查看下文注意事项；
+
+不同版本下，自定义事件数量
+
+功能/版本
+
+免费版
+
+专业版
+
+尊享版
+
+自定义事件量（个）
+
+100
+
+500
+
+2000
+
+事件参数量（个）
+
+50
+
+200
+
+200
+
+事件参数值量（个）
+
+1000
+
+2000
+
+5000
+
+为方便使用者理解及使用，可通过显示名称进行重命名（支持中文），进入【应用设置-事件-编辑】进行操作；
+
+埋码完成后，建议使用集成测试进行验证；
+
+子进程埋点
+友盟+SDK仅支持子进程自定义事件埋点，页面等其他类型采集暂不支持。子进程埋点需要在SDK初始化完成后调用函数UMConfigure.setProcessEvent。
+
+示例：
+
+public class UmengApplication extends Application{
+    @Override
+    public void onCreate(){
+        super.onCreate();
+        // 初始化SDK
+        UMConfigure.preInit(this, "您的appkey", "您的渠道");
+        
+        // 支持在子进程中统计自定义事件
+        UMConfigure.setProcessEvent(true);
+注意：
+
+如果需要在某个子进程中统计自定义事件，则需保证在此子进程中进行SDK初始化。
+
+流失卸载统计
+U-App为需要进行存量用户运营的开发者提供了流失卸载维度的分析功能，查看功能详情
+
+使用流失卸载功能需要额外集成高级运营分析功能独立库，通过独立库向友盟供给判断安装卸载、可疑设备的必要信息。
+
+新集成用户按此文档集成
+
+老用户开通流失卸载配置指引
+
+UYMManager（高级运营分析功能独立库）类下提供控制SDK采集行为的接口，强烈建议您保持默认配置，无需改动。若确有必要，可参考此文档进行手动配置，配置后流失卸载统计的准确性将大幅度受影响。
+
+重要 「高级运营分析功能独立库」需使用设别应用列表、地理位置信息等相关信息，请在隐私声明中添加相关话术。需重新配置混淆，以避免【友盟+】SDK被错误混淆导致SDK不可用，依赖库无法生效。见集成流程
+重要 集成独立库并发布上线后如果菜单一直没有数据，请检查独立库的真实覆盖设备量。被独立库覆盖的设备才会参与卸载判断，您可以在「反作弊-设备风险趋势」菜单，通过「活跃设备数」看独立库的覆盖设备量，正常情况下，「活跃设备数」会和携带独立库的App版本的活跃用户量近似。
+情况一：独立库覆盖量级符合App版本的活跃用户数，可能是未识别到有设备卸载。由于卸载计算需要全域数据参与，达足够量级才能生效，所以请勿以少量的测试设备发数的方式进行功能验证。
+情况二：独立库覆盖量级大幅少于App版本的活跃用户数，请和技术确认是否有根据指引，在正式上线的release版本中重新进行混淆配置，参考：老用户开通流失卸载配置指引
+如果以上排查完成后还没有数据，请联系友盟客服。
+隐私合规授权结果上传
+您可以将您用户的授权的结果使用该API传入。友盟+会自动校验在用户不同意隐私政策时，是否采集其信息。详情可参考友盟官方三合一Demo中 SplashTestActivity.java文件中调用示例。
+
+接口如下：
+
+UMConfigure.submitPolicyGrantResult(getApplicationContext(), true);
+采集开关接口
+// IMSI采集开关接口
+// 参数flag: true-允许采集IMSI；false-不允许采集IMSI
+public static void enableImsiCollection(boolean flag);
+
+// ICCID采集开关接口
+// 参数flag: true-允许采集ICCID；false-不允许采集ICCID
+public static void enableIccidCollection(boolean flag);
+
+// IMEI采集开关接口
+// 参数flag: true-允许采集IMEI；false-不允许采集IMEI
+public static void enableImeiCollection(boolean flag);
+
+// WiFi Mac地址采集开关接口
+// 参数flag: true-允许采集WiFi Mac；false-不允许采集WiFi Mac
+public static void enableWiFiMacCollection(boolean flag);
+接口类：
+com.umeng.commonsdk.UMConfigure
+该文档内容是否给您带来了帮助？
+为了不断改善我们的文档质量，请问您在阅读文档中是否遇到了以下相关问题？
+
+内容错误
+
+不及时更新
+
+链接地址错误
+
+缺少代码/图片示例
+
+其他
+（选填）您的反馈详情或截图，将有助于我们更快更精准地优化文档！
+null
+
+点击或拖拽上传图片
+
+扫码关注
+了解最新产品咨讯  友盟全域数据 
+友盟全域数据
+统计分析
+移动统计 U-App 
+网站统计 U-Web
+小程序统计 U-Mini
+ 
+开发者工具
+消息推送 U-Push 
+智能认证 U-Verify 
+社会化分享 U-Share
+智能超链 U-Link
+ 
+应用性能监控
+App端性能监控 
+小程序性能监控 
+Web/H5性能监控 
+ 
+开发者中心
+文档中心
+SDK下载
+OpenAPI
+ 
+服务与支持
+联系我们
+关于我们
+加入我们
+终端设备opt-out
+ 
+更多推荐
+官方资讯
+合规专区
+友盟+社区
+瓴羊数智服务 
+ 阿里巴巴集团 淘宝网 天猫 聚划算 全球速卖通 阿里巴巴国际交易市场 1688 阿里妈妈 飞猪 AliOS 阿里通信 高德 UC 友盟+ 钉钉 支付宝 人人都是产品经理 起点学院
+ © 2011-2024 Umeng.com , All Rights Reserved 京ICP备11021163号-6 |  京公网安备 11010502033607号 | 增值电信业务经营许可证：京ICP证120439号 |  | 服务条款 | 隐私政策
+
+
+
+
+
+
+
+
+
+与AI小盟的对话
+
+我的互动
+
+2025-08-01 09:39:13
+您好，我是AI小盟，很高兴为您解答友盟+产品和服务相关的问题。您可以直接在底部的输入框内输入您的问题，立刻为您解答！
+建议问题前面先表明具体是哪款产品或服务（如：U-Web怎么排除来路域名） 问题越具体越能帮助我理解哦！
+在这里输入您的问题...
+
+0 / 600
+本页对话内容由AI大模型生成，无法保证其完全的准确性、完整性和功能性，且不代表我们的态度或观点。
