@@ -6,6 +6,7 @@ temp/
 local/
 build/
 profiles/
+!native/engine/android/app/src
 native
 #//////////////////////////
 # NPM
